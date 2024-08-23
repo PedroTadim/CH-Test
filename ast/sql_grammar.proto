@@ -1,0 +1,814 @@
+syntax = "proto2";
+
+package sql_query_grammar;
+
+import "sql_funcs.proto";
+
+message Table {
+  required uint32 table = 1;
+}
+
+message Column {
+  required uint32 column = 1;
+}
+
+enum SpecialVal {
+  VAL_NULL = 1;
+  VAL_TRUE = 2;
+  VAL_FALSE = 3;
+  VAL_ZERO = 4;
+  VAL_ONE = 5;
+  VAL_MINUS_ONE = 6;
+  VAL_EMPTY_STRING = 7;
+  VAL_EMPTY_ARRAY = 8;
+  VAL_EMPTY_TUPLE = 9;
+  VAL_MINUS_ZERO_FP = 10;
+  VAL_PLUS_ZERO_FP = 11;
+  VAL_ZERO_FP = 12;
+  VAL_INF = 13;
+  VAL_PLUS_INF = 14;
+  VAL_MINUS_INF = 15;
+  VAL_NAN = 16;
+  VAL_HAPPY = 17;
+  VAL_TEN_HAPPY = 18;
+  MIN_INT32 = 19;
+  MAX_INT32 = 20;
+  MIN_INT64 = 21;
+  MAX_INT64 = 22;
+  VAL_NULL_CHAR = 23;
+  VAL_DEFAULT = 24;
+  VAL_STAR = 25;
+}
+
+message NumericLiteral {
+  repeated uint32 digits = 1;
+  required bool decimal_point = 2;
+  repeated uint32 dec_digits = 3;
+  repeated uint32 exp_digits = 4;
+  required bool negative_exp = 5;
+}
+
+message LiteralValue {
+  oneof lit_val_oneof {
+    int64 int_lit = 1;
+    uint64 uint_lit = 2;
+    NumericLiteral numeric_lit = 3;
+    bytes string_lit = 4;
+    bytes hex_string = 5;
+    bytes heredoc = 6;
+    int64 json_value = 7;
+    int64 json_string = 8;
+    SpecialVal special_val = 9;
+  }
+}
+
+message JSONColumn {
+  required Column col = 1;
+  oneof jcol_oneof {
+    bool json_col = 2;
+    uint32 json_array = 3;
+    TypeName json_cast = 4;
+    TypeName json_reinterpret = 5;
+  }
+}
+
+message FieldAccess {
+  oneof field_oneof {
+    uint32 array_index = 1;
+    Expr array_expr = 2;
+    Column array_key = 3;
+    uint32 tuple_index = 4;
+  }
+}
+
+message ExprColumn {
+  required Column col = 1;
+  repeated JSONColumn subcols = 2;
+  optional FieldAccess field = 3;
+}
+
+message ExprSchemaTableColumn {
+  //optional Schema schema = 1;
+  optional Table table = 1;
+  required ExprColumn col = 2;
+}
+
+enum UnaryOperator {
+  UNOP_MINUS = 1;
+  UNOP_PLUS = 2;
+  UNOP_NOT = 3;
+}
+
+message UnaryExpr {
+  required UnaryOperator unary_op = 1;
+  required Expr expr = 2;
+}
+
+enum BinaryOperator {
+  BINOP_LE = 1;
+  BINOP_LEQ = 2;
+  BINOP_GR = 3;
+  BINOP_GREQ = 4;
+  BINOP_EQ = 5;
+  BINOP_EQEQ = 6;
+  BINOP_NOTEQ = 7;
+  BINOP_LEGR = 8;
+  BINOP_AND = 9;
+  BINOP_OR = 10;
+  BINOP_CONCAT = 11;  // double pipe
+  BINOP_STAR = 12;
+  BINOP_SLASH = 13;
+  BINOP_PERCENT = 14;
+  BINOP_PLUS = 15;
+  BINOP_MINUS = 16;
+  BINOP_PIPE = 17;
+}
+
+message BinaryExpr {
+  required Expr lhs = 1;
+  required BinaryOperator op = 2;
+  required Expr rhs = 3;
+}
+
+message ParenthesesExpr {
+  required ExprColAlias expr = 1;
+  repeated ExprColAlias other_exprs = 2;
+}
+
+message CastExpr {
+  required Expr expr = 1;
+  required TypeName type_name = 2;
+}
+
+message ExprBetween {
+  required bool not = 1;
+  required Expr expr1 = 2;
+  required Expr expr2 = 3;
+  required Expr expr3 = 4;
+}
+
+message ExprList {
+  required Expr expr = 1;
+  repeated Expr extra_exprs = 2;
+}
+
+message ExprIn {
+  required ExprList expr = 1;
+  required bool global = 2;
+  required bool not = 3;
+  oneof exprin_oneof {
+    ExprList exprs = 4;
+    Select sel = 5;
+  }
+}
+
+message ExprAny {
+  required Expr expr = 1;
+  required BinaryOperator op = 2;
+  required bool anyall = 3;
+  required Select sel = 4;
+}
+
+message ExprNullTests {
+  required Expr expr = 1;
+  required bool not = 2;
+}
+
+message ExprCase {
+  optional Expr expr = 1;
+  required ExprWhenThen when_then = 2;
+  repeated ExprWhenThen extra_when_thens = 3;
+  optional Expr else_expr = 4;
+}
+
+message ExprWhenThen {
+  required Expr when_expr = 1;
+  required Expr then_expr = 2;
+}
+
+message ExprExists {
+  required bool not = 1;
+  required Select select = 3;
+}
+
+message ExprLike {
+  required Expr expr1 = 5;
+  required bool not = 1;
+  enum PossibleKeywords {
+    LIKE = 1;
+  }
+  required PossibleKeywords keyword = 2;
+  required Expr expr2 = 3;
+}
+
+message CondExpr {
+  required Expr expr1 = 1;
+  required Expr expr2 = 2;
+  required Expr expr3 = 3;
+}
+
+message ArraySequence {
+  repeated Expr values = 1;
+}
+
+message TupleSequence {
+  repeated ExprList values = 1;
+}
+
+message SQLFuncCall {
+  required SQLFunc func = 1;
+  repeated Expr args = 2;
+}
+
+// Separate this out to inflate the probability of having a literal value
+message ComplicatedExpr {
+  oneof complicated_expr_oneof {
+    ExprSchemaTableColumn expr_stc = 1;
+    UnaryExpr unary_expr = 2;
+    BinaryExpr binary_expr = 3;
+    ParenthesesExpr par_expr = 4;
+    CastExpr cast_expr = 5;
+    ExprBetween expr_between = 6;
+    ExprIn expr_in = 7;
+    ExprAny expr_any = 8;
+    ExprNullTests expr_null_tests = 9;
+    ExprCase expr_case = 10;
+    ExprExists expr_exists = 11;
+    ExprLike expr_like = 12;
+    CondExpr expr_cond = 13;
+    Select subquery = 14;
+    SQLFuncCall func_call = 15;
+    ArraySequence array = 16;
+    TupleSequence tuple = 17;
+  }
+  required LiteralValue lit_val = 18;  // used if oneof is empty.
+  optional FieldAccess field = 19;
+}
+
+message Expr {
+  oneof expr_oneof {
+    LiteralValue lit_val = 1;
+    ComplicatedExpr comp_expr = 2;
+  }
+}
+
+message ExprColAlias {
+  required Expr expr = 1;
+  optional Column col_alias = 2;
+}
+
+message ResultColumn {
+  oneof result_col_oneof {
+    ExprSchemaTableColumn etc = 1;
+    ExprColAlias eca = 2;
+    Table table_star = 3;
+  }
+}
+
+message ExprSchemaTable {
+  required Table table_name = 1;
+}
+
+message ExprColumnList {
+  required ExprColumn col = 1;
+  repeated ExprColumn extra_cols = 2;
+}
+
+message UsingExpr {
+  required ExprColumnList col_list = 1;
+}
+
+message JoinConstraint {
+  oneof join_constraint_oneof {
+    Expr on_expr = 1;
+    UsingExpr using_expr = 2;
+  }
+  required Expr def_expr = 3;
+}
+
+message JoinCore {
+  enum JoinConst {
+    ANY = 1;
+    ALL = 2;
+    ASOF = 3;
+  }
+  enum JoinType {
+    LEFT = 1;
+    INNER = 2;
+    RIGHT = 3;
+    FULL = 4;
+    CROSS = 5;
+    PASTE = 6;
+  }
+  enum JoinRange {
+    SEMI = 1;
+    ANTI = 2;
+  }
+  optional bool global = 1;
+  optional JoinConst join_const = 2;
+  required JoinType join_op = 3;
+  optional JoinRange join_range = 4;
+  required TableOrSubquery tos = 5;
+  required JoinConstraint join_constraint = 6;
+}
+
+message ArrayJoin {
+  optional bool left = 1;
+  required ExprColAlias constraint = 2;
+}
+
+message JoinClauseCore {
+  oneof join_clause_oneof {
+    JoinCore core = 1;
+    ArrayJoin arr = 2;
+  }
+  required JoinCore def_core = 3;
+}
+
+message JoinClause {
+  required TableOrSubquery tos = 1;
+  repeated JoinClauseCore clauses = 2;
+}
+
+message JoinedDerivedQuery {
+  required Select select = 1;
+  required Table table_alias = 2;
+}
+
+message JoinedTable {
+  required ExprSchemaTable est = 1;
+  optional bool final = 2;
+}
+
+message TableOrSubquery {
+  oneof tos_oneof {
+    JoinedTable jt = 1;
+    JoinedDerivedQuery jdq = 2;
+    JoinedQuery jq = 3;
+  }
+  required JoinedTable def_joined_table = 4;  // used if the oneof is empty
+}
+
+message JoinedQuery {
+  repeated TableOrSubquery tos_list = 1;  // if empty, use the join clause
+  required JoinClause join_clause = 2;
+}
+
+message FromStatement {
+  required JoinedQuery tos = 1;
+}
+
+message ColumnComparison {
+  required ExprSchemaTableColumn col = 1;
+  required BinaryOperator op = 2;
+  required Expr expr = 3;
+}
+
+message ExprComparisonHighProbability {
+  oneof expr_comp_oneof {
+    ColumnComparison cc = 1;
+    Expr expr = 2;
+  }
+  required ColumnComparison def_cc = 3;
+}
+
+message WhereStatement {
+  required ExprComparisonHighProbability expr = 1;
+}
+
+message GroupByStatement {
+  enum GroupingSets {
+    ROLLUP = 1;
+    CUBE = 2;
+  }
+  required ExprList exprs = 1;
+  optional GroupingSets gs = 2;
+  optional bool with_totals = 3;
+  optional Expr having_expr = 4;
+}
+
+message ExprOrderingTerm {
+  enum AscDesc {
+    ASC = 1;
+    DESC = 2;
+  }
+  required Expr expr = 1;
+  optional AscDesc asc_desc = 2;
+}
+
+message OrderByStatement {
+  required ExprOrderingTerm ord_term = 1;
+  repeated ExprOrderingTerm extra_ord_terms = 2;
+}
+
+message LimitStatement {
+  required uint32 limit = 1;
+  optional uint32 offset = 2;
+  optional bool with_ties = 3;
+}
+
+enum AllOrDistinct {
+  DISTINCT = 1;
+  ALL = 2;
+}
+
+message SelectStatementCore {
+  optional AllOrDistinct s_or_d = 1;
+  repeated ResultColumn result_columns = 2;
+  optional FromStatement from = 3;
+  optional WhereStatement pre_where = 4;
+  optional WhereStatement where = 5;
+  optional GroupByStatement groupby = 6;
+  //optional WindowStatement window = 6;
+  optional OrderByStatement orderby = 7;
+  optional LimitStatement limit = 8;
+}
+
+message SetQuery {
+  enum SetOp {
+    UNION = 1;
+    EXCEPT = 2;
+    INTERSECT = 3;
+  }
+  required Select sel1 = 1;
+  required SetOp set_op = 2;
+  required AllOrDistinct s_or_d = 3;
+  required Select sel2 = 4;
+}
+
+message Select {
+  oneof select_oneof {
+    SelectStatementCore select_core = 1;
+    SetQuery set_query = 2;
+  }
+  required SelectStatementCore def_sel = 3;
+}
+
+enum Integers {
+  UInt8 = 1;
+  UInt16 = 2;
+  UInt32 = 3;
+  UInt64 = 4;
+  UInt128 = 5;
+  UInt256 = 6;
+  Int8 = 7;
+  Int16 = 8;
+  Int32 = 9;
+  Int64 = 10;
+  Int128 = 11;
+  Int256 = 12;
+  Int = 13;
+}
+
+enum FloatingPoints {
+  Float32 = 1;
+  Float64 = 2;
+}
+
+enum Dates {
+  Date = 1;
+  Date32 = 2;
+  DateTime = 3;
+  DateTime64 = 4;
+}
+
+message Decimal {
+  optional uint32 precision = 1;
+  optional uint32 scale = 2;
+}
+
+message JsonCol {
+  required Column col = 1;
+  repeated Column cols = 2;
+  required TopTypeName type = 3;
+}
+
+message JsonDefItem {
+  oneof json_spec_oneof {
+    uint32 max_dynamic_paths = 1;
+    uint32 max_dynamic_types = 2;
+    JsonCol column = 3;
+  }
+  required uint32 def_paths = 4;
+}
+
+message JsonDef {
+  repeated JsonDefItem spec = 1;
+}
+
+message Dynamic {
+  optional uint32 ntypes = 1;
+}
+
+message LowCardinality {
+  oneof lcard_one_of {
+    Integers integers = 1;
+    FloatingPoints floats = 2;
+    bool sql_string = 3;
+    uint32 fixed_string = 4;
+    Dates dates = 5;
+  }
+}
+
+message BottomTypeName {
+  oneof bottom_one_of {
+    Integers integers = 1;
+    FloatingPoints floats = 2;
+    Decimal decimal = 3;
+    bool boolean = 4;
+    bool sql_string = 5;
+    uint32 fixed_string = 6;
+    bool uuid = 7;
+    Dates dates = 8;
+    JsonDef json = 9;
+    Dynamic dynamic = 10;
+    LowCardinality lcard = 11;
+  }
+}
+
+message MapType {
+  required TopTypeName key = 1;
+  required TopTypeName value = 2;
+}
+
+message TypeColumnDef {
+  required Column col = 1;
+  required TopTypeName type_name = 2;
+}
+
+message TupleType {
+  required TypeColumnDef value1 = 1;
+  required TypeColumnDef value2 = 2;
+  repeated TypeColumnDef others = 3;
+}
+
+message VariantType {
+  required TopTypeName value1 = 1;
+  required TopTypeName value2 = 2;
+  repeated TopTypeName others = 3;
+}
+
+message NestedType {
+  required TypeColumnDef type1 = 1;
+  repeated TypeColumnDef others = 2;
+}
+
+message TopTypeName {
+  oneof type_oneof {
+    BottomTypeName non_nullable = 1;
+    BottomTypeName nullable = 2;
+    TopTypeName array = 3;
+    MapType map = 4;
+    TupleType tuple = 5;
+    NestedType nested = 6;
+    VariantType variant = 7;
+  }
+}
+
+message TypeName {
+  required TopTypeName type = 1;
+}
+
+message ColumnDef {
+  required Column col = 1;
+  required TypeName type = 2;
+  optional bool nullable = 3;
+}
+
+message CreateTableDef {
+  required ColumnDef col_def = 1;
+  repeated ColumnDef other_col_defs = 2;
+}
+
+message TableOrderBy {
+  repeated Expr exprs = 1;
+}
+
+message TableEngine {
+  enum TableEngineValues {
+    Memory = 1;
+    //require order by
+    MergeTree = 2;
+    ReplacingMergeTree = 3;
+    SummingMergeTree = 4;
+    AggregatingMergeTree = 5;
+    CollapsingMergeTree = 6;
+    VersionedCollapsingMergeTree = 7;
+    GraphiteMergeTree = 8;
+    //end require order by
+    StripeLog = 9;
+    Log = 10;
+    TinyLog = 11;
+  }
+  required TableEngineValues engine = 1;
+  repeated Column cols = 2;
+}
+
+message CreateTable {
+  optional bool if_not_exists = 1;
+  required ExprSchemaTable est = 2;
+  required TableEngine engine = 3;
+  required CreateTableDef def = 4;
+  optional TableOrderBy order = 5;
+  optional Select as_select_stmt = 6; // AS select-stmt
+}
+
+message DropTable {
+  optional bool if_exists = 1;
+  optional bool if_empty = 2;
+  required ExprSchemaTable est = 3;
+  repeated ExprSchemaTable other_tables = 4;
+}
+
+message ValuesStatement {
+  required ExprList expr_list = 1;
+  repeated ExprList extra_expr_lists = 2;
+}
+
+message Insert {
+  required ExprSchemaTable est = 1;
+  oneof insert_oneof {
+    ValuesStatement values = 2;
+    SelectStatementCore select = 3;
+  }
+  required ValuesStatement def_values = 4;
+}
+
+message Delete {
+  required ExprSchemaTable est = 1;
+  required WhereStatement where = 2;
+}
+
+message Truncate {
+  oneof truncate_oneof {
+    ExprSchemaTable est = 1;
+    bool all = 2;
+  }
+  required ExprSchemaTable def_est = 3;
+}
+
+enum ExpPlanOpt {
+  VAL1_HEADER = 1;
+  VAL1_DESCRIPTION = 2;
+  VAL1_INDEXES = 3;
+  VAL1_ACTIONS = 4;
+  VAL1_JSON = 5;
+}
+
+enum ExpPipelineOpt {
+  VAL2_HEADER = 1;
+  VAL2_GRAPH = 2;
+  VAL2_COMPACT = 3;
+}
+
+enum ExpQueryTreeOpt {
+  VAL3_RUN_PASSES = 1;
+  VAL3_DUMP_PASSES = 2;
+  VAL3_PASSES = 3;
+}
+
+message ExplainOption {
+  required uint32 opt = 1;
+  required bool val = 2;
+}
+
+enum OutFormat {
+  OUT_TabSeparated = 1;
+  OUT_TabSeparatedRaw = 2;
+  OUT_TabSeparatedWithNames = 3;
+  OUT_TabSeparatedWithNamesAndTypes = 4;
+  OUT_TabSeparatedRawWithNames = 5;
+  OUT_TabSeparatedRawWithNamesAndTypes = 6;
+  OUT_CSV = 7;
+  OUT_CSVWithNames = 8;
+  OUT_CSVWithNamesAndTypes = 9;
+  OUT_CustomSeparated = 10;
+  OUT_CustomSeparatedWithNames = 11;
+  OUT_CustomSeparatedWithNamesAndTypes = 12;
+  OUT_SQLInsert = 13;
+  OUT_Values = 14;
+  OUT_Vertical = 15;
+  OUT_JSON = 16;
+  OUT_JSONStrings = 17;
+  OUT_JSONColumns = 18;
+  OUT_JSONColumnsWithMetadata = 19;
+  OUT_JSONCompact = 20;
+  OUT_JSONCompactStrings = 21;
+  OUT_JSONCompactColumns = 22;
+  OUT_JSONEachRow = 23;
+  OUT_PrettyJSONEachRow = 24;
+  OUT_JSONEachRowWithProgress = 25;
+  OUT_JSONStringsEachRow = 26;
+  OUT_JSONStringsEachRowWithProgress = 27;
+  OUT_JSONCompactEachRow = 28;
+  OUT_JSONCompactEachRowWithNames = 29;
+  OUT_JSONCompactEachRowWithNamesAndTypes = 30;
+  OUT_JSONCompactStringsEachRow = 31;
+  OUT_JSONCompactStringsEachRowWithNames = 32;
+  OUT_JSONCompactStringsEachRowWithNamesAndTypes = 33;
+  OUT_JSONObjectEachRow = 34;
+  OUT_BSONEachRow = 35;
+  OUT_TSKV = 36;
+  OUT_Pretty = 37;
+  OUT_PrettyNoEscapes = 38;
+  OUT_PrettyMonoBlock = 39;
+  OUT_PrettyNoEscapesMonoBlock = 40;
+  OUT_PrettyCompact = 41;
+  OUT_PrettyCompactNoEscapes = 42;
+  OUT_PrettyCompactMonoBlock = 43;
+  OUT_PrettyCompactNoEscapesMonoBlock = 44;
+  OUT_PrettySpace = 45;
+  OUT_PrettySpaceNoEscapes = 46;
+  OUT_PrettySpaceMonoBlock = 47;
+  OUT_PrettySpaceNoEscapesMonoBlock = 48;
+  OUT_Prometheus = 49;
+  OUT_Protobuf = 50;
+  OUT_ProtobufSingle = 51;
+  OUT_ProtobufList = 52;
+  OUT_Avro = 53;
+  OUT_Parquet = 54;
+  OUT_Arrow = 55;
+  OUT_ArrowStream = 56;
+  OUT_ORC = 57;
+  OUT_Npy = 58;
+  OUT_RowBinary = 59;
+  OUT_RowBinaryWithNames = 60;
+  OUT_RowBinaryWithNamesAndTypes = 61;
+  OUT_Native = 62;
+  OUT_Null = 63;
+  OUT_XML = 64;
+  OUT_CapnProto = 65;
+  OUT_LineAsString = 66;
+  OUT_RawBLOB = 67;
+  OUT_MsgPack = 68;
+  OUT_Markdown = 69;
+}
+
+message TopSelect {
+  required Select sel = 1;
+  optional OutFormat format = 2;
+}
+
+message CheckTable {
+  required ExprSchemaTable est = 1;
+  optional bool single_result = 2;
+}
+
+message DescTable {
+  required ExprSchemaTable est = 1;
+  optional bool sub_cols = 2;
+}
+
+message DeduplicateExpr {
+  optional ExprColumnList col_list = 1;
+}
+
+message OptimizeTable {
+  required ExprSchemaTable est = 1;
+  optional bool final = 2;
+  optional DeduplicateExpr dedup = 3;
+}
+
+message ExchangeTables {
+  required ExprSchemaTable est1 = 1;
+  required ExprSchemaTable est2 = 2;
+}
+
+message SQLQueryInner {
+  oneof query_inner_oneof {
+    TopSelect select = 1;
+    CreateTable create_table = 2;
+    DropTable drop_table = 3;
+    Insert insert = 4;
+    Delete del = 5;
+    Truncate trunc = 6;
+    OptimizeTable opt = 7;
+    CheckTable check = 8;
+    DescTable desc = 9;
+    ExchangeTables exchange = 10;
+  }
+  required TopSelect def_select = 11;
+}
+
+message ExplainQuery {
+  enum ExplainValues {
+    PLAN = 1;
+    PIPELINE = 2;
+    QUERY_TREE = 3;
+    AST = 4;
+    SYNTAX = 5;
+    ESTIMATE = 6;
+    TABLE_OVERRIDE = 7;
+  }
+  optional ExplainValues expl = 1;
+  repeated ExplainOption opts = 2;
+  required SQLQueryInner inner_query = 3;
+}
+
+message SQLQuery {
+  oneof query_oneof {
+    SQLQueryInner inner_query = 1;
+    ExplainQuery explain = 2;
+  }
+  required SQLQueryInner def_query = 3;
+}

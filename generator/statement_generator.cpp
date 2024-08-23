@@ -1,0 +1,225 @@
+#include "statement_generator.h"
+#include "sql_catalog.h"
+
+#include <algorithm>
+
+namespace chfuzz {
+
+int StatementGenerator::GenerateNextCreateTable(ClientContext &cc, RandomGenerator &rg, sql_query_grammar::CreateTable *ct) {
+	SQLTable next;
+	const uint32_t tname = this->table_counter++;
+
+	next.tname = tname;
+	ct->mutable_est()->mutable_table_name()->set_table(next.tname);
+
+	const uint32_t ncols = (rg.NextMediumNumber() % 5) + 1;
+	sql_query_grammar::CreateTableDef *ctdef = ct->mutable_def();
+	std::uniform_int_distribution<uint32_t> table_engine(1, 11);
+	const uint32_t nopt = table_engine(rg.gen);
+	sql_query_grammar::TableEngine *te = ct->mutable_engine();
+	sql_query_grammar::TableEngine_TableEngineValues val = (sql_query_grammar::TableEngine_TableEngineValues) nopt;
+
+	te->set_engine(val);
+	for (uint32_t i = 0 ; i < ncols ; i++) {
+		SQLColumn col;
+		const uint32_t cname = next.col_counter++;
+		sql_query_grammar::ColumnDef *cd = i == 0 ? ctdef->mutable_col_def() : ctdef->add_other_col_defs();
+		sql_query_grammar::TypeName *tn = cd->mutable_type();
+
+		col.cname = cname;
+		cd->mutable_col()->set_column(cname);
+		this->ids.push_back(cname);
+		col.tp = RandomNextType(rg, true, next.col_counter, tn->mutable_type());
+
+		next.cols[cname] = std::move(col);
+
+	}
+
+	if ((val >= sql_query_grammar::TableEngine_TableEngineValues::TableEngine_TableEngineValues_MergeTree &&
+		 val <= sql_query_grammar::TableEngine_TableEngineValues::TableEngine_TableEngineValues_VersionedCollapsingMergeTree)) {
+		sql_query_grammar::TableOrderBy *tob = ct->mutable_order();
+
+		if (rg.NextSmallNumber() < 7) {
+			const uint32_t ocols = (rg.NextMediumNumber() % std::min<uint32_t>(ids.size(), UINT32_C(3))) + 1;
+
+			std::shuffle(ids.begin(), ids.end(), rg.gen);
+			for (uint32_t i = 0; i < ocols ; i++) {
+				tob->add_exprs()->mutable_comp_expr()->mutable_expr_stc()->mutable_col()->mutable_col()->set_column(ids[i]);
+			}
+		}
+	}
+
+	ids.clear();
+	this->staged_tables[tname] = std::move(next);
+	return 0;
+}
+
+int StatementGenerator::GenerateNextDropTable(ClientContext &cc, RandomGenerator &rg, sql_query_grammar::DropTable *dp) {
+	const SQLTable &t = rg.PickKeyRandomlyFromMap(this->tables);
+
+	dp->set_if_empty(rg.NextSmallNumber() < 4);
+	dp->mutable_est()->mutable_table_name()->set_table(t.tname);
+	return 0;
+}
+
+int StatementGenerator::GenerateNextOptimizeTable(ClientContext &cc, RandomGenerator &rg, sql_query_grammar::OptimizeTable *ot) {
+	const SQLTable &t = rg.PickKeyRandomlyFromMap(this->tables);
+
+	if (rg.NextSmallNumber() < 4) {
+		sql_query_grammar::DeduplicateExpr *dde = ot->mutable_dedup();
+
+		if (rg.NextSmallNumber() < 6) {
+			sql_query_grammar::ExprColumnList *ecl = dde->mutable_col_list();
+			const uint32_t ocols = (rg.NextMediumNumber() % std::min<uint32_t>(t.cols.size(), UINT32_C(4))) + 1;
+
+			for (const auto &col : t.cols) {
+				ids.push_back(col.first);
+			}
+			std::shuffle(ids.begin(), ids.end(), rg.gen);
+			for (uint32_t i = 0; i < ocols; i++) {
+				sql_query_grammar::ExprColumn *ec = i == 0 ? ecl->mutable_col() : ecl->add_extra_cols();
+
+				ec->mutable_col()->set_column(ids[i]);
+			}
+			ids.clear();
+		}
+	}
+	ot->set_final(rg.NextSmallNumber() < 4);
+	ot->mutable_est()->mutable_table_name()->set_table(t.tname);
+	return 0;
+}
+
+int StatementGenerator::GenerateNextCheckTable(ClientContext &cc, RandomGenerator &rg, sql_query_grammar::CheckTable *ct) {
+	const SQLTable &t = rg.PickKeyRandomlyFromMap(this->tables);
+
+	ct->set_single_result(rg.NextSmallNumber() < 4);
+	ct->mutable_est()->mutable_table_name()->set_table(t.tname);
+	return 0;
+}
+
+int StatementGenerator::GenerateNextDescTable(ClientContext &cc, RandomGenerator &rg, sql_query_grammar::DescTable *dt) {
+	const SQLTable &t = rg.PickKeyRandomlyFromMap(this->tables);
+
+	dt->set_sub_cols(rg.NextSmallNumber() < 4);
+	dt->mutable_est()->mutable_table_name()->set_table(t.tname);
+	return 0;
+}
+
+int StatementGenerator::GenerateNextInsert(ClientContext &cc, RandomGenerator &rg, sql_query_grammar::Insert *sq) {
+	return 0;
+}
+
+int StatementGenerator::GenerateNextDelete(ClientContext &cc, RandomGenerator &rg, sql_query_grammar::Delete *sq) {
+	return 0;
+}
+
+int StatementGenerator::GenerateNextTruncate(ClientContext &cc, RandomGenerator &rg, sql_query_grammar::Truncate *trunc) {
+	const SQLTable &t = rg.PickKeyRandomlyFromMap(this->tables);
+
+	trunc->mutable_est()->mutable_table_name()->set_table(t.tname);
+	return 0;
+}
+
+int StatementGenerator::GenerateNextExchangeTables(ClientContext &cc, RandomGenerator &rg, sql_query_grammar::ExchangeTables *et) {
+	for (const auto &entries : this->tables) {
+		this->ids.push_back(entries.first);
+	}
+	std::shuffle(this->ids.begin(), this->ids.end(), rg.gen);
+	et->mutable_est1()->mutable_table_name()->set_table(this->ids[0]);
+	et->mutable_est2()->mutable_table_name()->set_table(this->ids[1]);
+	ids.clear();
+	return 0;
+}
+
+int StatementGenerator::GenerateNextQuery(ClientContext &cc, RandomGenerator &rg, sql_query_grammar::SQLQueryInner *sq) {
+	const uint32_t create_table = 5 * (tables.size() < this->max_tables),
+				   drop_table = 2 * (int)!tables.empty(),
+				   insert = 30 * (int)!tables.empty(),
+				   light_delete = 5 * (int)!tables.empty(),
+				   truncate = 2 * (int)!tables.empty(),
+				   optimize_table = 2 * (int)!tables.empty(),
+				   check_table = 2 * (int)!tables.empty(),
+				   desc_table = 2 * (int)!tables.empty(),
+				   exchange_tables = 1 * (int)(tables.size() > 1),
+				   prob_space = create_table + drop_table + insert + light_delete + truncate + optimize_table +
+				   				check_table + desc_table + exchange_tables;
+
+	assert(this->ids.empty());
+	if (prob_space) {
+		std::uniform_int_distribution<uint32_t> next_dist(1, prob_space);
+		const uint32_t nopt = next_dist(rg.gen);
+
+		if (create_table && nopt < create_table) {
+			return GenerateNextCreateTable(cc, rg, sq->mutable_create_table());
+		} else if (drop_table && nopt < (create_table + drop_table)) {
+			return GenerateNextDropTable(cc, rg, sq->mutable_drop_table());
+		} else if (insert && nopt < (create_table + drop_table + insert)) {
+			return GenerateNextInsert(cc, rg, sq->mutable_insert());
+		} else if (light_delete && nopt < (create_table + drop_table + insert + light_delete)) {
+			return GenerateNextDelete(cc, rg, sq->mutable_del());
+		} else if (truncate && nopt < (create_table + drop_table + insert + light_delete + truncate)) {
+			return GenerateNextTruncate(cc, rg, sq->mutable_trunc());
+		} else if (optimize_table && nopt < (create_table + drop_table + insert + light_delete + truncate + optimize_table)) {
+			return GenerateNextOptimizeTable(cc, rg, sq->mutable_opt());
+		} else if (check_table && nopt < (create_table + drop_table + insert + light_delete + truncate + optimize_table + check_table)) {
+			return GenerateNextCheckTable(cc, rg, sq->mutable_check());
+		} else if (desc_table && nopt < (create_table + drop_table + insert + light_delete + truncate + optimize_table + check_table + desc_table)) {
+			return GenerateNextDescTable(cc, rg, sq->mutable_desc());
+		} else if (exchange_tables && nopt < (create_table + drop_table + insert + light_delete + truncate + optimize_table + check_table + desc_table +
+											  exchange_tables)) {
+			return GenerateNextExchangeTables(cc, rg, sq->mutable_exchange());
+		} else {
+			return GenerateTopSelect(cc, rg, sq->mutable_select());
+		}
+	} else {
+		return GenerateTopSelect(cc, rg, sq->mutable_select());
+	}
+}
+
+int StatementGenerator::GenerateNextExplain(ClientContext &cc, RandomGenerator &rg, sql_query_grammar::ExplainQuery *eq) {
+
+	if (rg.NextSmallNumber() < 10) {
+		eq->set_expl((sql_query_grammar::ExplainQuery_ExplainValues) ((rg.NextRandomUInt32() % (uint32_t) sql_query_grammar::ExplainQuery::ExplainValues_MAX) + 1));
+	}
+	return GenerateNextQuery(cc, rg, eq->mutable_inner_query());
+}
+
+int StatementGenerator::GenerateNextStatement(ClientContext &cc, RandomGenerator &rg, sql_query_grammar::SQLQuery &sq) {
+	const uint32_t noption = rg.NextMediumNumber();
+
+	if (noption < 15) {
+		return GenerateNextExplain(cc, rg, sq.mutable_explain());
+	} else {
+		return GenerateNextQuery(cc, rg, sq.mutable_inner_query());
+	}
+}
+
+void StatementGenerator::UpdateGenerator(const sql_query_grammar::SQLQuery &sq, const bool success) {
+	const sql_query_grammar::SQLQueryInner &query = sq.has_inner_query() ? sq.inner_query() : sq.explain().inner_query();
+
+	if (query.has_create_table()) {
+		const uint32_t tname = query.create_table().est().table_name().table();
+
+		if (success) {
+			this->tables[tname] = std::move(this->staged_tables[tname]);
+		}
+		this->staged_tables.erase(tname);
+	} else if (query.has_drop_table()) {
+		const uint32_t tname = query.drop_table().est().table_name().table();
+
+		if (success) {
+			this->tables.erase(tname);
+		}
+	} else if (query.has_exchange()) {
+		const uint32_t tname1 = query.exchange().est1().table_name().table(),
+					   tname2 = query.exchange().est2().table_name().table();
+		SQLTable tx = std::move(this->tables[tname1]), ty = std::move(this->tables[tname2]);
+
+		tx.tname = tname2;
+		ty.tname = tname1;
+		this->tables[tname2] = std::move(tx);
+		this->tables[tname1] = std::move(ty);
+	}
+}
+
+}
