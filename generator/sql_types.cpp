@@ -110,7 +110,7 @@ SQLType* StatementGenerator::BottomType(RandomGenerator &rg, const bool allow_dy
 			std::optional<uint32_t> precision = std::nullopt, scale = std::nullopt;
 
 			if (rg.NextBool()) {
-				precision = std::optional<uint32_t>((rg.NextRandomUInt32() % 76) + 1);
+				precision = std::optional<uint32_t>((rg.NextRandomUInt32() % 10) + 1);
 
 				if (dec) {
 					dec->set_precision(precision.value());
@@ -235,7 +235,7 @@ SQLType* StatementGenerator::RandomNextType(RandomGenerator &rg, const bool allo
 
 	if (noption < 21 && allow_nullable) {
 		//nullable
-		return BottomType(rg, allow_dynamic, tp ? tp->mutable_nullable() : nullptr);
+		return new Nullable(BottomType(rg, false, tp ? tp->mutable_nullable() : nullptr));
 	} else if (noption < 71 || this->depth == this->max_depth) {
 		//non nullable
 		return BottomType(rg, allow_dynamic, tp ? tp->mutable_non_nullable() : nullptr);
@@ -260,6 +260,7 @@ SQLType* StatementGenerator::RandomNextType(RandomGenerator &rg, const bool allo
 		const uint32_t ncols = rg.NextMediumNumber() % (std::min<uint32_t>(5, this->max_width - this->width));
 		std::vector<SubType> subtypes;
 
+		this->depth++;
 		for (uint32_t i = 0 ; i < ncols ; i++) {
 			const uint32_t cname = col_counter++;
 			sql_query_grammar::TypeColumnDef *tcd = tp ? (
@@ -268,11 +269,10 @@ SQLType* StatementGenerator::RandomNextType(RandomGenerator &rg, const bool allo
 			if (tcd) {
 				tcd->mutable_col()->set_column(cname);
 			}
-			this->depth++;
 			SQLType* k = this->RandomNextType(rg, true, allow_dynamic, col_counter, tcd ? tcd->mutable_type_name() : nullptr);
-			this->depth--;
 			subtypes.push_back(SubType(cname, k));
 		}
+		this->depth--;
 		return new TupleType(subtypes);
 	} /*else if (noption < 91) {
 		//nested
@@ -323,27 +323,32 @@ void StatementGenerator::StrAppendBottomValue(RandomGenerator &rg, std::string &
 	} else if (dynamic_cast<FloatType*>(tp)) {
 		ret += std::to_string(rg.NextRandomDouble());
 	} else if ((dtp = dynamic_cast<DateType*>(tp))) {
-		ret += "'";
 		if (dtp->has_time) {
 			ret += std::to_string(dtp->extended ? rg.NextDateTime64() : rg.NextDateTime());
 		} else {
 			ret += std::to_string(dtp->extended ? rg.NextDateTime64() : rg.NextDate32());
 		}
-		ret += "'";
 	} else if ((detp = dynamic_cast<DecimalType*>(tp))) {
-		const uint32_t left = detp->precision.value_or(10), right = left - detp->scale.value_or(0);
+		const uint32_t right = detp->scale.value_or(0), left = detp->precision.value_or(10) - right;
 
 		ret += rg.NextBool() ? "-" : "";
 		if (left > 0) {
-			for (uint32_t j = 0 ; j < left; j++) {
+			std::uniform_int_distribution<uint32_t> next_dist(1, left);
+			const uint32_t nlen = next_dist(rg.gen);
+
+			ret += std::max<char>(rg.NextDigit(), '1');
+			for (uint32_t j = 1; j < nlen; j++) {
 				ret += rg.NextDigit();
 			}
 		} else {
 			ret += "0";
 		}
 		if (right > 0) {
+			std::uniform_int_distribution<uint32_t> next_dist(1, right);
+			const uint32_t nlen = next_dist(rg.gen);
+
 			ret += ".";
-			for (uint32_t j = 0 ; j < right; j++) {
+			for (uint32_t j = 0; j < nlen; j++) {
 				ret += rg.NextDigit();
 			}
 		}
@@ -353,6 +358,8 @@ void StatementGenerator::StrAppendBottomValue(RandomGenerator &rg, std::string &
 		ret += "'";
 		rg.NextString(ret, limit);
 		ret += "'";
+	} else if (dynamic_cast<BoolType*>(tp)) {
+		ret += rg.NextBool() ? "TRUE" : "FALSE";
 	} else {
 		assert(0);
 	}
@@ -459,7 +466,7 @@ void StatementGenerator::StrBuildJSONElement(RandomGenerator &rg, std::string &r
 		case 8:
 		case 9:
 		case 10: { //string
-			std::uniform_int_distribution<int> slen(0, 200);
+			std::uniform_int_distribution<int> slen(0, 10);
 			std::uniform_int_distribution<int> chars(32, 128);
 			const int nlen = slen(rg.gen);
 
@@ -477,6 +484,9 @@ void StatementGenerator::StrBuildJSONElement(RandomGenerator &rg, std::string &r
 				case static_cast<int>('\\'):
 					ret += "\\\\";
 					break;
+				case static_cast<int>('\''):
+					ret += "''";
+					break;
 				default:
 					ret += static_cast<char>(nchar);
 				}
@@ -490,12 +500,11 @@ void StatementGenerator::StrBuildJSONElement(RandomGenerator &rg, std::string &r
 
 void StatementGenerator::StrBuildJSON(RandomGenerator &rg, const int depth, const int width, std::string &ret) {
 	ret += "{";
-	if (depth) {
-		std::uniform_int_distribution<int> childd(1, 10);
+	if (depth && width) {
+		std::uniform_int_distribution<int> childd(1, width);
 		const int nchildren = childd(rg.gen);
 
 		for (int i = 0 ; i < nchildren ; i++) {
-			std::uniform_int_distribution<int> copt(0, 5);
 			std::uniform_int_distribution<int> jopt(1, 3);
 			const int noption = jopt(rg.gen);
 
@@ -531,18 +540,12 @@ void StatementGenerator::StrAppendAnyValue(RandomGenerator &rg, std::string &ret
 	LowCardinality *lc;
 
 	if (dynamic_cast<IntType*>(tp) || dynamic_cast<FloatType*>(tp) || dynamic_cast<DateType*>(tp) ||
-		dynamic_cast<DecimalType*>(tp) || dynamic_cast<StringType*>(tp)) {
+		dynamic_cast<DecimalType*>(tp) || dynamic_cast<StringType*>(tp) || dynamic_cast<BoolType*>(tp)) {
 		StrAppendBottomValue(rg, ret, tp);
 	} else if ((lc = dynamic_cast<LowCardinality*>(tp))) {
 		StrAppendBottomValue(rg, ret, lc->subtype);
-	} else if ((mt = dynamic_cast<MapType*>(tp))) {
-		StrAppendMap(rg, ret, mt);
-	} else if ((at = dynamic_cast<ArrayType*>(tp))) {
-		StrAppendArray(rg, ret, at);
-	} else if ((ttp = dynamic_cast<TupleType*>(tp))) {
-		StrAppendTuple(rg, ret, ttp);
 	} else if ((nl = dynamic_cast<Nullable*>(tp))) {
-		if (rg.NextLargeNumber() < 11) {
+		if (rg.NextMediumNumber() < 6) {
 			ret += "NULL";
 		} else {
 			StrAppendAnyValue(rg, ret, nl->subtype);
@@ -550,15 +553,29 @@ void StatementGenerator::StrAppendAnyValue(RandomGenerator &rg, std::string &ret
 	} else if (dynamic_cast<JSONType*>(tp)) {
 		std::uniform_int_distribution<int> dopt(1, 3), wopt(1, 3);
 
-		ret += "$jstr$";
+		ret += "'";
 		StrBuildJSON(rg, dopt(rg.gen), wopt(rg.gen), ret);
-		ret += "$jstr$::JSON";
+		ret += "'";
 	} else if (dynamic_cast<DynamicType*>(tp)) {
 		uint32_t col_counter = 0;
 		SQLType *next = RandomNextType(rg, true, false, col_counter, nullptr);
 
 		StrAppendAnyValue(rg, ret, next);
 		delete next;
+	} else if (this->depth == this->max_depth) {
+		ret += "1";
+	} else if ((mt = dynamic_cast<MapType*>(tp))) {
+		this->depth++;
+		StrAppendMap(rg, ret, mt);
+		this->depth--;
+	} else if ((at = dynamic_cast<ArrayType*>(tp))) {
+		this->depth++;
+		StrAppendArray(rg, ret, at);
+		this->depth--;
+	} else if ((ttp = dynamic_cast<TupleType*>(tp))) {
+		this->depth++;
+		StrAppendTuple(rg, ret, ttp);
+		this->depth--;
 	} else {
 		assert(0);
 	}

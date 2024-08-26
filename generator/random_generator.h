@@ -20,7 +20,7 @@ class RandomGenerator {
 private:
 	std::uniform_int_distribution<int8_t> ints8;
 
-	std::uniform_int_distribution<uint8_t> uints8;
+	std::uniform_int_distribution<uint8_t> uints8, digits, json_cols;
 
 	std::uniform_int_distribution<int16_t> ints16;
 
@@ -28,7 +28,7 @@ private:
 
 	std::uniform_int_distribution<int32_t> ints32;
 
-	std::uniform_int_distribution<uint32_t> uints32, dist1, dist2, dist3, dist4, digits, json_cols;
+	std::uniform_int_distribution<uint32_t> uints32, dist1, dist2, dist3, dist4;
 
 	std::uniform_int_distribution<int64_t> ints64;
 
@@ -68,8 +68,8 @@ public:
 										   ints64(std::numeric_limits<int64_t>::min(), std::numeric_limits<int64_t>::max()),
 										   uints64(std::numeric_limits<uint64_t>::min(), std::numeric_limits<uint64_t>::max()),
 										   doubles(std::numeric_limits<double>::min(), std::numeric_limits<double>::max()),
-										   json_cols(0, 5),
-										   digits(0, 9) {
+										   json_cols(static_cast<uint8_t>('0'), static_cast<uint8_t>('5')),
+										   digits(static_cast<uint8_t>('0'), static_cast<uint8_t>('9')) {
 		std::random_device rd;
 		gen = std::mt19937(seed ? seed : rd());
 
@@ -136,11 +136,11 @@ public:
 		return ints64(gen);
 	}
 
-	const uint32_t NextDigit() {
-		return digits(gen);
+	const char NextDigit() {
+		return static_cast<char>(digits(gen));
 	}
 
-	const uint32_t NextJsonCol() {
+	const char NextJsonCol() {
 		return json_cols(gen);
 	}
 

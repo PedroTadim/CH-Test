@@ -1365,6 +1365,7 @@ CONV_FN(Insert, insert) {
   } else if (insert.has_select()) {
     SelectStatementCoreToString(ret, insert.select());
   } else if (insert.has_query()) {
+    ret += "VALUES ";
     ret += insert.query();
   } else {
     ret += "VALUES (0)";
@@ -1406,7 +1407,7 @@ CONV_FN(DescTable, dt) {
 }
 
 CONV_FN(DeduplicateExpr, de) {
-  ret += "DEDUPLICATE";
+  ret += " DEDUPLICATE";
   if (de.has_col_list()) {
     ret += " BY ";
     ExprColumnListToString(ret, de.col_list());

@@ -32,10 +32,11 @@ int StatementGenerator::GenerateNextCreateTable(ClientContext &cc, RandomGenerat
 		col.cname = cname;
 		cd->mutable_col()->set_column(cname);
 		this->ids.push_back(cname);
+		this->max_depth = 4;
 		col.tp = RandomNextType(rg, true, true, next.col_counter, tn->mutable_type());
+		this->max_depth = 10;
 
 		next.cols[cname] = std::move(col);
-
 	}
 
 	if ((val >= sql_query_grammar::TableEngine_TableEngineValues::TableEngine_TableEngineValues_MergeTree &&
@@ -117,22 +118,25 @@ int StatementGenerator::GenerateNextInsert(ClientContext &cc, RandomGenerator &r
 	for (const auto &entry : t.cols) {
 		ins->add_cols()->set_column(entry.second.cname);
 	}
+	this->max_depth = 4;
 	for (uint32_t i = 0 ; i < nrows; i++) {
 		bool first = true;
 
-		ret += "(";
 		if (i != 0) {
 			ret += ", ";
 		}
+		ret += "(";
 		for (const auto &entry : t.cols) {
 			if (first) {
-				ret += ", ";
 				first = false;
+			} else {
+				ret += ", ";
 			}
 			StrAppendAnyValue(rg, ret, entry.second.tp);
 		}
 		ret += ")";
 	}
+	this->max_depth = 10;
 	ins->set_query(ret);
 	return 0;
 }
@@ -225,20 +229,20 @@ int StatementGenerator::GenerateNextStatement(ClientContext &cc, RandomGenerator
 void StatementGenerator::UpdateGenerator(const sql_query_grammar::SQLQuery &sq, const bool success) {
 	const sql_query_grammar::SQLQueryInner &query = sq.has_inner_query() ? sq.inner_query() : sq.explain().inner_query();
 
-	if (query.has_create_table()) {
+	if (sq.has_inner_query() && query.has_create_table()) {
 		const uint32_t tname = query.create_table().est().table_name().table();
 
 		if (success) {
 			this->tables[tname] = std::move(this->staged_tables[tname]);
 		}
 		this->staged_tables.erase(tname);
-	} else if (query.has_drop_table()) {
+	} else if (sq.has_inner_query() && query.has_drop_table()) {
 		const uint32_t tname = query.drop_table().est().table_name().table();
 
 		if (success) {
 			this->tables.erase(tname);
 		}
-	} else if (query.has_exchange()) {
+	} else if (sq.has_inner_query() && query.has_exchange()) {
 		const uint32_t tname1 = query.exchange().est1().table_name().table(),
 					   tname2 = query.exchange().est2().table_name().table();
 		SQLTable tx = std::move(this->tables[tname1]), ty = std::move(this->tables[tname2]);
