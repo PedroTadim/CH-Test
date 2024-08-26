@@ -1349,13 +1349,25 @@ CONV_FN(ValuesStatement, values) {
 CONV_FN(Insert, insert) {
   ret += "INSERT INTO ";
   ExprSchemaTableToString(ret, insert.est());
-  ret += "(c0, c1, c2) ";
+  if (insert.cols_size()) {
+    ret += " (";
+    for (int i = 0; i < insert.cols_size(); i++) {
+      if (i != 0) {
+        ret += ", ";
+      }
+      ColumnToString(ret, insert.cols(i));
+    }
+    ret += ")";
+  }
+  ret += " ";
   if (insert.has_values()) {
     ValuesStatementToString(ret, insert.values());
   } else if (insert.has_select()) {
     SelectStatementCoreToString(ret, insert.select());
+  } else if (insert.has_query()) {
+    ret += insert.query();
   } else {
-    ValuesStatementToString(ret, insert.def_values());
+    ret += "VALUES (0)";
   }
 }
 

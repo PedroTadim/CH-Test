@@ -24,10 +24,9 @@ public:
 };
 
 class IntType : public SQLType {
+public:
 	const uint32_t size;
 	const bool is_unsigned;
-
-public:
 	IntType(const uint32_t s, const bool isu) : size(s), is_unsigned(isu) {}
 
 	const std::string TypeName() {
@@ -41,9 +40,8 @@ public:
 };
 
 class FloatType : public SQLType {
-	const uint32_t size;
-
 public:
+	const uint32_t size;
 	FloatType(const uint32_t s) : size(s) {}
 
 	const std::string TypeName() {
@@ -56,9 +54,8 @@ public:
 };
 
 class DateType : public SQLType {
-	const bool has_time, extended;
-
 public:
+	const bool has_time, extended;
 	DateType(const bool ht, const bool ex) : has_time(ht), extended(ex) {}
 
 	const std::string TypeName() {
@@ -74,9 +71,8 @@ public:
 };
 
 class DecimalType : public SQLType {
-	std::optional<uint32_t> precision, scale;
-
 public:
+	const std::optional<uint32_t> precision, scale;
 	DecimalType(const std::optional<uint32_t> p, const std::optional<uint32_t> s) : precision(p), scale(s) {}
 
 	const std::string TypeName() {
@@ -97,9 +93,8 @@ public:
 };
 
 class StringType : public SQLType {
-	std::optional<uint32_t> precision;
-
 public:
+	std::optional<uint32_t> precision;
 	StringType(const std::optional<uint32_t> p) : precision(p) {}
 
 	const std::string TypeName() {
@@ -117,9 +112,8 @@ public:
 };
 
 class DynamicType : public SQLType {
-	std::optional<uint32_t> ntypes;
-
 public:
+	std::optional<uint32_t> ntypes;
 	DynamicType(const std::optional<uint32_t> n) : ntypes(n) {}
 
 	const std::string TypeName() {
@@ -136,9 +130,8 @@ public:
 };
 
 class LowCardinality : public SQLType {
-	SQLType* subtype;
-
 public:
+	SQLType* subtype;
 	LowCardinality(SQLType* s) : subtype(s) {}
 
 	const std::string TypeName() {
@@ -153,9 +146,8 @@ public:
 
 
 class MapType : public SQLType {
-	SQLType* key, *value;
-
 public:
+	SQLType* key, *value;
 	MapType(SQLType* k, SQLType* v) : key(k), value(v) {}
 
 	const std::string TypeName() {
@@ -171,9 +163,8 @@ public:
 };
 
 class ArrayType : public SQLType {
-	SQLType* subtype;
-
 public:
+	SQLType* subtype;
 	ArrayType(SQLType* s) : subtype(s) {}
 
 	const std::string TypeName() {
@@ -197,7 +188,6 @@ public:
 class TupleType : public SQLType {
 public:
 	std::vector<SubType> subtypes;
-
 	TupleType(std::vector<SubType> s) : subtypes(s) {}
 
 	const std::string TypeName() {
@@ -251,11 +241,9 @@ public:
 	};
 };
 
-
 class Nullable : public SQLType {
-	SQLType* subtype;
-
 public:
+	SQLType* subtype;
 	Nullable(SQLType* s) : subtype(s) {}
 
 	const std::string TypeName() {

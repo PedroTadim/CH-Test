@@ -1,7 +1,10 @@
 #include "statement_generator.h"
 #include "sql_catalog.h"
+#include "sql_types.h"
 
 #include <algorithm>
+#include <cstdint>
+#include <sys/types.h>
 
 namespace chfuzz {
 
@@ -29,7 +32,7 @@ int StatementGenerator::GenerateNextCreateTable(ClientContext &cc, RandomGenerat
 		col.cname = cname;
 		cd->mutable_col()->set_column(cname);
 		this->ids.push_back(cname);
-		col.tp = RandomNextType(rg, true, next.col_counter, tn->mutable_type());
+		col.tp = RandomNextType(rg, true, true, next.col_counter, tn->mutable_type());
 
 		next.cols[cname] = std::move(col);
 
@@ -105,7 +108,32 @@ int StatementGenerator::GenerateNextDescTable(ClientContext &cc, RandomGenerator
 	return 0;
 }
 
-int StatementGenerator::GenerateNextInsert(ClientContext &cc, RandomGenerator &rg, sql_query_grammar::Insert *sq) {
+int StatementGenerator::GenerateNextInsert(ClientContext &cc, RandomGenerator &rg, sql_query_grammar::Insert *ins) {
+	const SQLTable &t = rg.PickKeyRandomlyFromMap(this->tables);
+	const uint32_t nrows = rg.NextMediumNumber(), ncols = t.cols.size();
+	std::string ret;
+
+	ins->mutable_est()->mutable_table_name()->set_table(t.tname);
+	for (const auto &entry : t.cols) {
+		ins->add_cols()->set_column(entry.second.cname);
+	}
+	for (uint32_t i = 0 ; i < nrows; i++) {
+		bool first = true;
+
+		ret += "(";
+		if (i != 0) {
+			ret += ", ";
+		}
+		for (const auto &entry : t.cols) {
+			if (first) {
+				ret += ", ";
+				first = false;
+			}
+			StrAppendAnyValue(rg, ret, entry.second.tp);
+		}
+		ret += ")";
+	}
+	ins->set_query(ret);
 	return 0;
 }
 

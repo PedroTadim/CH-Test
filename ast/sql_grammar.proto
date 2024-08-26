@@ -627,11 +627,12 @@ message ValuesStatement {
 
 message Insert {
   required ExprSchemaTable est = 1;
+  repeated Column cols = 2;
   oneof insert_oneof {
-    ValuesStatement values = 2;
-    SelectStatementCore select = 3;
+    ValuesStatement values = 3;
+    SelectStatementCore select = 4;
+    string query = 5;
   }
-  required ValuesStatement def_values = 4;
 }
 
 message Delete {

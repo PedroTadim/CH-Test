@@ -82,9 +82,9 @@ SQLType* RandomDateType(RandomGenerator &rg, sql_query_grammar::Dates &res) {
 	}
 }
 
-SQLType* StatementGenerator::BottomType(RandomGenerator &rg, sql_query_grammar::BottomTypeName *tp) {
+SQLType* StatementGenerator::BottomType(RandomGenerator &rg, const bool allow_dynamic, sql_query_grammar::BottomTypeName *tp) {
 	SQLType* res = nullptr;
-	std::uniform_int_distribution<uint32_t> next_dist(1, 10);
+	std::uniform_int_distribution<uint32_t> next_dist(1, allow_dynamic ? 10 : 9);
 	const uint32_t nopt = next_dist(rg.gen);
 
 	switch (nopt) {
@@ -92,23 +92,29 @@ SQLType* StatementGenerator::BottomType(RandomGenerator &rg, sql_query_grammar::
 			//int
 			sql_query_grammar::Integers nint;
 			res = RandomIntType(rg, nint);
-			tp->set_integers(nint);
+			if (tp) {
+				tp->set_integers(nint);
+			}
 		} break;
 		case 2: {
 			//float
 			sql_query_grammar::FloatingPoints nflo;
 			res = RandomFloatType(rg, nflo);
-			tp->set_floats(nflo);
+			if (tp) {
+				tp->set_floats(nflo);
+			}
 		} break;
 		case 3: {
 			//decimal
-			sql_query_grammar::Decimal *dec = tp->mutable_decimal();
+			sql_query_grammar::Decimal *dec = tp ? tp->mutable_decimal() : nullptr;
 			std::optional<uint32_t> precision = std::nullopt, scale = std::nullopt;
 
 			if (rg.NextBool()) {
 				precision = std::optional<uint32_t>((rg.NextRandomUInt32() % 76) + 1);
 
-				dec->set_precision(precision.value());
+				if (dec) {
+					dec->set_precision(precision.value());
+				}
 				if (rg.NextBool()) {
 					scale = std::optional<uint32_t>(rg.NextRandomUInt32() % precision.value());
 				}
@@ -117,7 +123,9 @@ SQLType* StatementGenerator::BottomType(RandomGenerator &rg, sql_query_grammar::
 		} break;
 		case 4: {
 			//boolean
-			tp->set_boolean(true);
+			if (tp) {
+				tp->set_boolean(true);
+			}
 			res = new BoolType();
 		} break;
 		case 5: {
@@ -125,10 +133,14 @@ SQLType* StatementGenerator::BottomType(RandomGenerator &rg, sql_query_grammar::
 			std::optional<uint32_t> swidth = std::nullopt;
 
 			if (rg.NextBool()) {
-				tp->set_sql_string(true);
+				if (tp) {
+					tp->set_sql_string(true);
+				}
 			} else {
 				swidth = std::optional<uint32_t>(rg.NextRandomUInt32() % 100);
-				tp->set_fixed_string(swidth.value());
+				if (tp) {
+					tp->set_fixed_string(swidth.value());
+				}
 			}
 			res = new StringType(swidth);
 		} break;
@@ -136,22 +148,13 @@ SQLType* StatementGenerator::BottomType(RandomGenerator &rg, sql_query_grammar::
 			//dates
 			sql_query_grammar::Dates dd;
 			res = RandomDateType(rg, dd);
-			tp->set_dates(dd);
+			if (tp) {
+				tp->set_dates(dd);
+			}
 		} break;
 		case 7: {
-			//dynamic
-			sql_query_grammar::Dynamic *dyn = tp->mutable_dynamic();
-			std::optional<uint32_t> ntypes = std::nullopt;
-
-			if (rg.NextBool()) {
-				ntypes = std::optional<uint32_t>(rg.NextRandomUInt32() % 100);
-				dyn->set_ntypes(ntypes.value());
-			}
-			res = new DynamicType(ntypes);
-		} break;
-		case 8: {
 			//LowCardinality
-			sql_query_grammar::LowCardinality *lcard = tp->mutable_lcard();
+			sql_query_grammar::LowCardinality *lcard = tp ? tp->mutable_lcard() : nullptr;
 			std::uniform_int_distribution<uint32_t> next_dist(1, 4);
 			const uint32_t nopt = next_dist(rg.gen);
 			SQLType* sub = nullptr;
@@ -161,81 +164,112 @@ SQLType* StatementGenerator::BottomType(RandomGenerator &rg, sql_query_grammar::
 					//int
 					sql_query_grammar::Integers nint;
 					sub = RandomIntType(rg, nint);
-					lcard->set_integers(nint);
+					if (lcard) {
+						lcard->set_integers(nint);
+					}
 				} break;
 				case 2: {
 					//float
 					sql_query_grammar::FloatingPoints nflo;
 					sub = RandomFloatType(rg, nflo);
-					lcard->set_floats(nflo);
+					if (lcard) {
+						lcard->set_floats(nflo);
+					}
 				} break;
 				case 3: {
 					//dates
 					sql_query_grammar::Dates dd;
 					sub = RandomDateType(rg, dd);
-					lcard->set_dates(dd);
+					if (lcard) {
+						lcard->set_dates(dd);
+					}
 				} break;
 				default: {
 					//string
 					std::optional<uint32_t> swidth = std::nullopt;
 
 					if (rg.NextBool()) {
-						lcard->set_sql_string(true);
+						if (lcard) {
+							lcard->set_sql_string(true);
+						}
 					} else {
 						swidth = std::optional<uint32_t>(rg.NextRandomUInt32() % 100);
-						lcard->set_fixed_string(swidth.value());
+						if (lcard) {
+							lcard->set_fixed_string(swidth.value());
+						}
 					}
 					sub = new StringType(swidth);
 				} break;
 			}
 			res = new LowCardinality(sub);
 		} break;
-		default: {
-			tp->mutable_json();
+		case 8:
+		case 9:
 			res = new JSONType({});
-		}
+			if (tp) {
+				tp->mutable_json();
+			}
+			break;
+		case 10: {
+			//dynamic
+			sql_query_grammar::Dynamic *dyn = tp ? tp->mutable_dynamic() : nullptr;
+			std::optional<uint32_t> ntypes = std::nullopt;
+
+			if (rg.NextBool()) {
+				ntypes = std::optional<uint32_t>(rg.NextRandomUInt32() % 100);
+				if (dyn) {
+					dyn->set_ntypes(ntypes.value());
+				}
+			}
+			res = new DynamicType(ntypes);
+		} break;
+		default:
+			assert(0);
 	}
 	return res;
 }
 
-SQLType* StatementGenerator::RandomNextType(RandomGenerator &rg, const bool allow_nullable, uint32_t &col_counter, sql_query_grammar::TopTypeName *tp) {
+SQLType* StatementGenerator::RandomNextType(RandomGenerator &rg, const bool allow_nullable, const bool allow_dynamic,
+											uint32_t &col_counter, sql_query_grammar::TopTypeName *tp) {
 	const uint32_t noption = rg.NextMediumNumber();
 
 	if (noption < 21 && allow_nullable) {
 		//nullable
-		return BottomType(rg, tp->mutable_nullable());
+		return BottomType(rg, allow_dynamic, tp ? tp->mutable_nullable() : nullptr);
 	} else if (noption < 71 || this->depth == this->max_depth) {
 		//non nullable
-		return BottomType(rg, tp->mutable_non_nullable());
+		return BottomType(rg, allow_dynamic, tp ? tp->mutable_non_nullable() : nullptr);
 	} else if (noption < 81) {
 		//array
 		this->depth++;
-		SQLType* k = this->RandomNextType(rg, true, col_counter, tp->mutable_array());
+		SQLType* k = this->RandomNextType(rg, true, allow_dynamic, col_counter, tp ? tp->mutable_array() : nullptr);
 		this->depth--;
 		return new ArrayType(k);
 	} else if (noption < 91 || this->width <= (this->max_width - 1)) {
 		//map
-		sql_query_grammar::MapType *mt = tp->mutable_map();
+		sql_query_grammar::MapType *mt = tp ? tp->mutable_map() : nullptr;
 
 		this->depth++;
-		SQLType* k = this->RandomNextType(rg, false, col_counter, mt->mutable_key());
-		SQLType* v = this->RandomNextType(rg, true, col_counter, mt->mutable_value());
+		SQLType* k = this->RandomNextType(rg, false, allow_dynamic, col_counter, mt ? mt->mutable_key() : nullptr);
+		SQLType* v = this->RandomNextType(rg, true, allow_dynamic, col_counter, mt ? mt->mutable_value() : nullptr);
 		this->depth--;
 		return new MapType(k, v);
 	} else {
 		//tuple
-		sql_query_grammar::TupleType *tt = tp->mutable_tuple();
+		sql_query_grammar::TupleType *tt = tp ? tp->mutable_tuple() : nullptr;
 		const uint32_t ncols = rg.NextMediumNumber() % (std::min<uint32_t>(5, this->max_width - this->width));
 		std::vector<SubType> subtypes;
 
 		for (uint32_t i = 0 ; i < ncols ; i++) {
 			const uint32_t cname = col_counter++;
-			sql_query_grammar::TypeColumnDef *tcd =
-				(i == 0) ? tt->mutable_value1() : ((i == 1) ? tt->mutable_value2() : tt->add_others());
+			sql_query_grammar::TypeColumnDef *tcd = tp ? (
+				(i == 0) ? tt->mutable_value1() : ((i == 1) ? tt->mutable_value2() : tt->add_others())) : nullptr;
 
-			tcd->mutable_col()->set_column(cname);
+			if (tcd) {
+				tcd->mutable_col()->set_column(cname);
+			}
 			this->depth++;
-			SQLType* k = this->RandomNextType(rg, true, col_counter, tcd->mutable_type_name());
+			SQLType* k = this->RandomNextType(rg, true, allow_dynamic, col_counter, tcd ? tcd->mutable_type_name() : nullptr);
 			this->depth--;
 			subtypes.push_back(SubType(cname, k));
 		}
@@ -246,6 +280,288 @@ SQLType* StatementGenerator::RandomNextType(RandomGenerator &rg, const bool allo
 		//variant
 	}*/
 	return nullptr;
+}
+
+void StatementGenerator::StrAppendBottomValue(RandomGenerator &rg, std::string &ret, SQLType* tp) {
+	IntType *itp;
+	DateType *dtp;
+	DecimalType *detp;
+	StringType *stp;
+
+	if ((itp = dynamic_cast<IntType*>(tp))) {
+		if (itp->is_unsigned) {
+			switch (itp->size) {
+				case 8:
+					ret += std::to_string(rg.NextRandomUInt8());
+					break;
+				case 16:
+					ret += std::to_string(rg.NextRandomUInt16());
+					break;
+				case 32:
+					ret += std::to_string(rg.NextRandomUInt32());
+					break;
+				default:
+					ret += std::to_string(rg.NextRandomUInt64());
+					break;
+			}
+		} else {
+			switch (itp->size) {
+				case 8:
+					ret += std::to_string(rg.NextRandomInt8());
+					break;
+				case 16:
+					ret += std::to_string(rg.NextRandomInt16());
+					break;
+				case 32:
+					ret += std::to_string(rg.NextRandomInt32());
+					break;
+				default:
+					ret += std::to_string(rg.NextRandomInt64());
+					break;
+			}
+		}
+	} else if (dynamic_cast<FloatType*>(tp)) {
+		ret += std::to_string(rg.NextRandomDouble());
+	} else if ((dtp = dynamic_cast<DateType*>(tp))) {
+		ret += "'";
+		if (dtp->has_time) {
+			ret += std::to_string(dtp->extended ? rg.NextDateTime64() : rg.NextDateTime());
+		} else {
+			ret += std::to_string(dtp->extended ? rg.NextDateTime64() : rg.NextDate32());
+		}
+		ret += "'";
+	} else if ((detp = dynamic_cast<DecimalType*>(tp))) {
+		const uint32_t left = detp->precision.value_or(10), right = left - detp->scale.value_or(0);
+
+		ret += rg.NextBool() ? "-" : "";
+		if (left > 0) {
+			for (uint32_t j = 0 ; j < left; j++) {
+				ret += rg.NextDigit();
+			}
+		} else {
+			ret += "0";
+		}
+		if (right > 0) {
+			ret += ".";
+			for (uint32_t j = 0 ; j < right; j++) {
+				ret += rg.NextDigit();
+			}
+		}
+	} else if ((stp = dynamic_cast<StringType*>(tp))) {
+		const uint32_t limit = stp->precision.value_or(100);
+
+		ret += "'";
+		rg.NextString(ret, limit);
+		ret += "'";
+	} else {
+		assert(0);
+	}
+}
+
+void StatementGenerator::StrAppendMap(RandomGenerator &rg, std::string &ret, MapType *mt) {
+	const uint32_t limit = (rg.NextSmallNumber() - 1);
+
+	ret += "{";
+	for (uint32_t i = 0 ; i < limit; i++) {
+		if (i != 0) {
+			ret += ", ";
+		}
+		StrAppendAnyValue(rg, ret, mt->key);
+		ret += ":";
+		StrAppendAnyValue(rg, ret, mt->value);
+	}
+	ret += "}";
+}
+
+void StatementGenerator::StrAppendArray(RandomGenerator &rg, std::string &ret, ArrayType *at) {
+	const uint32_t limit = (rg.NextSmallNumber() - 1);
+
+	ret += "[";
+	for (uint32_t i = 0 ; i < limit; i++) {
+		if (i != 0) {
+			ret += ", ";
+		}
+		StrAppendAnyValue(rg, ret, at->subtype);
+	}
+	ret += "]";
+}
+
+void StatementGenerator::StrAppendTuple(RandomGenerator &rg, std::string &ret, TupleType *at) {
+	ret += "(";
+	for (uint32_t i = 0 ; i < at->subtypes.size(); i++) {
+		if (i != 0) {
+			ret += ", ";
+		}
+		StrAppendAnyValue(rg, ret, at->subtypes[i].subtype);
+	}
+	ret += ")";
+}
+
+void StatementGenerator::StrBuildJSONArray(RandomGenerator &rg, const int depth, const int width, std::string &ret) {
+	std::uniform_int_distribution<int> jopt(1, 3);
+	int nelems = 0, next_width = 0;
+
+	if (width) {
+		std::uniform_int_distribution<int> alen(1, width);
+		nelems = alen(rg.gen);
+	}
+	ret += "[";
+	next_width = nelems;
+	for (int j = 0 ; j < nelems ; j++) {
+		if (j != 0) {
+			ret += ",";
+		}
+		if (depth) {
+			const int noption = jopt(rg.gen);
+
+			switch (noption) {
+			case 1: //object
+				StrBuildJSON(rg, depth - 1, next_width, ret);
+				break;
+			case 2: //array
+				StrBuildJSONArray(rg, depth - 1, next_width, ret);
+				break;
+			case 3: //others
+				StrBuildJSONElement(rg, ret);
+				break;
+			default:
+				assert(0);
+			}
+		} else {
+			StrBuildJSONElement(rg, ret);
+		}
+		next_width--;
+	}
+	ret += "]";
+}
+
+void StatementGenerator::StrBuildJSONElement(RandomGenerator &rg, std::string &ret) {
+	std::uniform_int_distribution<int> opts(1, 10);
+	const int noption = opts(rg.gen);
+
+	switch (noption) {
+		case 1:
+			ret += "false";
+		break;
+		case 2:
+			ret += "true";
+		break;
+		case 3:
+			ret += "null";
+		break;
+		case 4:
+		case 5:
+		case 6:
+		case 7: { //number
+			std::uniform_int_distribution<int> numbers(-1000, 1000);
+			ret += std::to_string(numbers(rg.gen));
+		} break;
+		case 8:
+		case 9:
+		case 10: { //string
+			std::uniform_int_distribution<int> slen(0, 200);
+			std::uniform_int_distribution<int> chars(32, 128);
+			const int nlen = slen(rg.gen);
+
+			ret += '"';
+			for (int i = 0 ; i < nlen ; i++) {
+				const int nchar = chars(rg.gen);
+
+				switch (nchar) {
+				case 128:
+					ret += "😂";
+					break;
+				case static_cast<int>('"'):
+					ret += "\\\"";
+					break;
+				case static_cast<int>('\\'):
+					ret += "\\\\";
+					break;
+				default:
+					ret += static_cast<char>(nchar);
+				}
+			}
+			ret += '"';
+		} break;
+		default:
+			assert(0);
+	}
+}
+
+void StatementGenerator::StrBuildJSON(RandomGenerator &rg, const int depth, const int width, std::string &ret) {
+	ret += "{";
+	if (depth) {
+		std::uniform_int_distribution<int> childd(1, 10);
+		const int nchildren = childd(rg.gen);
+
+		for (int i = 0 ; i < nchildren ; i++) {
+			std::uniform_int_distribution<int> copt(0, 5);
+			std::uniform_int_distribution<int> jopt(1, 3);
+			const int noption = jopt(rg.gen);
+
+			if (i != 0) {
+				ret += ",";
+			}
+			ret += "\"c";
+			ret += rg.NextJsonCol();
+			ret += "\":";
+			switch (noption) {
+			case 1: //object
+				StrBuildJSON(rg, depth - 1, width, ret);
+				break;
+			case 2: //array
+				StrBuildJSONArray(rg, depth - 1, width, ret);
+				break;
+			case 3: //others
+				StrBuildJSONElement(rg, ret);
+				break;
+			default:
+				assert(0);
+			}
+		}
+	}
+	ret += "}";
+}
+
+void StatementGenerator::StrAppendAnyValue(RandomGenerator &rg, std::string &ret, SQLType *tp) {
+	MapType *mt;
+	Nullable *nl;
+	ArrayType *at;
+	TupleType *ttp;
+	LowCardinality *lc;
+
+	if (dynamic_cast<IntType*>(tp) || dynamic_cast<FloatType*>(tp) || dynamic_cast<DateType*>(tp) ||
+		dynamic_cast<DecimalType*>(tp) || dynamic_cast<StringType*>(tp)) {
+		StrAppendBottomValue(rg, ret, tp);
+	} else if ((lc = dynamic_cast<LowCardinality*>(tp))) {
+		StrAppendBottomValue(rg, ret, lc->subtype);
+	} else if ((mt = dynamic_cast<MapType*>(tp))) {
+		StrAppendMap(rg, ret, mt);
+	} else if ((at = dynamic_cast<ArrayType*>(tp))) {
+		StrAppendArray(rg, ret, at);
+	} else if ((ttp = dynamic_cast<TupleType*>(tp))) {
+		StrAppendTuple(rg, ret, ttp);
+	} else if ((nl = dynamic_cast<Nullable*>(tp))) {
+		if (rg.NextLargeNumber() < 11) {
+			ret += "NULL";
+		} else {
+			StrAppendAnyValue(rg, ret, nl->subtype);
+		}
+	} else if (dynamic_cast<JSONType*>(tp)) {
+		std::uniform_int_distribution<int> dopt(1, 3), wopt(1, 3);
+
+		ret += "$jstr$";
+		StrBuildJSON(rg, dopt(rg.gen), wopt(rg.gen), ret);
+		ret += "$jstr$::JSON";
+	} else if (dynamic_cast<DynamicType*>(tp)) {
+		uint32_t col_counter = 0;
+		SQLType *next = RandomNextType(rg, true, false, col_counter, nullptr);
+
+		StrAppendAnyValue(rg, ret, next);
+		delete next;
+	} else {
+		assert(0);
+	}
 }
 
 }

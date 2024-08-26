@@ -14,10 +14,20 @@ private:
 
 	std::vector<uint32_t> ids;
 	int depth = 0, width = 0, max_depth = 10, max_width = 10, max_tables = 10;
+
+	void StrAppendBottomValue(RandomGenerator &rg, std::string &ret, SQLType* tp);
+	void StrAppendMap(RandomGenerator &rg, std::string &ret, MapType *mt);
+	void StrAppendArray(RandomGenerator &rg, std::string &ret, ArrayType *at);
+	void StrAppendTuple(RandomGenerator &rg, std::string &ret, TupleType *at);
+	void StrAppendAnyValue(RandomGenerator &rg, std::string &ret, SQLType *tp);
+
+	void StrBuildJSONArray(RandomGenerator &rg, const int depth, const int width, std::string &ret);
+	void StrBuildJSONElement(RandomGenerator &rg, std::string &ret);
+	void StrBuildJSON(RandomGenerator &rg, const int depth, const int width, std::string &ret);
 public:
 
-	SQLType* BottomType(RandomGenerator &rg, sql_query_grammar::BottomTypeName *tp);
-	SQLType* RandomNextType(RandomGenerator &rg, const bool allow_nullable, uint32_t &col_counter, sql_query_grammar::TopTypeName *tp);
+	SQLType* BottomType(RandomGenerator &rg, const bool allow_dynamic, sql_query_grammar::BottomTypeName *tp);
+	SQLType* RandomNextType(RandomGenerator &rg, const bool allow_nullable, const bool allow_dynamic, uint32_t &col_counter, sql_query_grammar::TopTypeName *tp);
 
 	int GenerateNextCreateTable(ClientContext &cc, RandomGenerator &rg, sql_query_grammar::CreateTable *sq);
 	int GenerateNextDropTable(ClientContext &cc, RandomGenerator &rg, sql_query_grammar::DropTable *sq);
