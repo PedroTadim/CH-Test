@@ -26,8 +26,8 @@ private:
 	void StrBuildJSON(RandomGenerator &rg, const int depth, const int width, std::string &ret);
 public:
 
-	SQLType* BottomType(RandomGenerator &rg, const bool allow_dynamic, sql_query_grammar::BottomTypeName *tp);
-	SQLType* RandomNextType(RandomGenerator &rg, const bool allow_nullable, const bool allow_dynamic, uint32_t &col_counter, sql_query_grammar::TopTypeName *tp);
+	SQLType* BottomType(RandomGenerator &rg, const bool allow_dynamic_types, sql_query_grammar::BottomTypeName *tp);
+	SQLType* RandomNextType(RandomGenerator &rg, const bool allow_nullable, const bool allow_dynamic_types, uint32_t &col_counter, sql_query_grammar::TopTypeName *tp);
 
 	int GenerateNextCreateTable(ClientContext &cc, RandomGenerator &rg, sql_query_grammar::CreateTable *sq);
 	int GenerateNextDropTable(ClientContext &cc, RandomGenerator &rg, sql_query_grammar::DropTable *sq);

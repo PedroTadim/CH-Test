@@ -17,7 +17,7 @@ int StatementGenerator::GenerateNextCreateTable(ClientContext &cc, RandomGenerat
 
 	const uint32_t ncols = (rg.NextMediumNumber() % 5) + 1;
 	sql_query_grammar::CreateTableDef *ctdef = ct->mutable_def();
-	std::uniform_int_distribution<uint32_t> table_engine(1, 11);
+	std::uniform_int_distribution<uint32_t> table_engine(1, 10);
 	const uint32_t nopt = table_engine(rg.gen);
 	sql_query_grammar::TableEngine *te = ct->mutable_engine();
 	sql_query_grammar::TableEngine_TableEngineValues val = (sql_query_grammar::TableEngine_TableEngineValues) nopt;
@@ -37,6 +37,26 @@ int StatementGenerator::GenerateNextCreateTable(ClientContext &cc, RandomGenerat
 		this->max_depth = 10;
 
 		next.cols[cname] = std::move(col);
+	}
+	if ((val >= sql_query_grammar::TableEngine_TableEngineValues::TableEngine_TableEngineValues_CollapsingMergeTree &&
+		 val <= sql_query_grammar::TableEngine_TableEngineValues::TableEngine_TableEngineValues_VersionedCollapsingMergeTree)) {
+		//params for engine
+		const uint32_t limit = val == sql_query_grammar::TableEngine_TableEngineValues::TableEngine_TableEngineValues_VersionedCollapsingMergeTree ? 2 : 1;
+
+		for (uint32_t i = 0 ; i < limit; i++) {
+			SQLColumn col;
+			const uint32_t cname = next.col_counter++;
+			sql_query_grammar::ColumnDef *cd = ctdef->add_other_col_defs();
+			sql_query_grammar::TypeName *tn = cd->mutable_type();
+
+			col.cname = cname;
+			cd->mutable_col()->set_column(cname);
+			this->ids.push_back(cname);
+			col.tp = new IntType(8, i == 1);
+			tn->mutable_type()->mutable_nullable()->set_integers(sql_query_grammar::Integers::Int32);
+
+			te->add_cols()->set_column(cname);
+		}
 	}
 
 	if ((val >= sql_query_grammar::TableEngine_TableEngineValues::TableEngine_TableEngineValues_MergeTree &&
@@ -141,7 +161,11 @@ int StatementGenerator::GenerateNextInsert(ClientContext &cc, RandomGenerator &r
 	return 0;
 }
 
-int StatementGenerator::GenerateNextDelete(ClientContext &cc, RandomGenerator &rg, sql_query_grammar::Delete *sq) {
+int StatementGenerator::GenerateNextDelete(ClientContext &cc, RandomGenerator &rg, sql_query_grammar::Delete *del) {
+	const SQLTable &t = rg.PickKeyRandomlyFromMap(this->tables);
+
+	del->mutable_est()->mutable_table_name()->set_table(t.tname);
+	del->mutable_where()->mutable_expr()->mutable_expr()->mutable_lit_val()->set_special_val(sql_query_grammar::SpecialVal::VAL_TRUE);
 	return 0;
 }
 

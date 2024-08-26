@@ -369,7 +369,6 @@ message ExprComparisonHighProbability {
     ColumnComparison cc = 1;
     Expr expr = 2;
   }
-  required ColumnComparison def_cc = 3;
 }
 
 message WhereStatement {
@@ -594,11 +593,11 @@ message TableEngine {
     AggregatingMergeTree = 5;
     CollapsingMergeTree = 6;
     VersionedCollapsingMergeTree = 7;
-    GraphiteMergeTree = 8;
+    //GraphiteMergeTree = 8;
     //end require order by
-    StripeLog = 9;
-    Log = 10;
-    TinyLog = 11;
+    StripeLog = 8;
+    Log = 9;
+    TinyLog = 10;
   }
   required TableEngineValues engine = 1;
   repeated Column cols = 2;

@@ -1133,8 +1133,6 @@ CONV_FN(ExprComparisonHighProbability, echp) {
     ColumnComparisonToString(ret, echp.cc());
   } else if (echp.has_expr()) {
     ExprToString(ret, echp.expr());
-  } else {
-    ColumnComparisonToString(ret, echp.def_cc());
   }
 }
 

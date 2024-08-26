@@ -82,9 +82,9 @@ SQLType* RandomDateType(RandomGenerator &rg, sql_query_grammar::Dates &res) {
 	}
 }
 
-SQLType* StatementGenerator::BottomType(RandomGenerator &rg, const bool allow_dynamic, sql_query_grammar::BottomTypeName *tp) {
+SQLType* StatementGenerator::BottomType(RandomGenerator &rg, const bool allow_dynamic_types, sql_query_grammar::BottomTypeName *tp) {
 	SQLType* res = nullptr;
-	std::uniform_int_distribution<uint32_t> next_dist(1, allow_dynamic ? 10 : 9);
+	std::uniform_int_distribution<uint32_t> next_dist(1, allow_dynamic_types ? 10 : 7);
 	const uint32_t nopt = next_dist(rg.gen);
 
 	switch (nopt) {
@@ -229,7 +229,7 @@ SQLType* StatementGenerator::BottomType(RandomGenerator &rg, const bool allow_dy
 	return res;
 }
 
-SQLType* StatementGenerator::RandomNextType(RandomGenerator &rg, const bool allow_nullable, const bool allow_dynamic,
+SQLType* StatementGenerator::RandomNextType(RandomGenerator &rg, const bool allow_nullable, const bool allow_dynamic_types,
 											uint32_t &col_counter, sql_query_grammar::TopTypeName *tp) {
 	const uint32_t noption = rg.NextMediumNumber();
 
@@ -238,11 +238,11 @@ SQLType* StatementGenerator::RandomNextType(RandomGenerator &rg, const bool allo
 		return new Nullable(BottomType(rg, false, tp ? tp->mutable_nullable() : nullptr));
 	} else if (noption < 71 || this->depth == this->max_depth) {
 		//non nullable
-		return BottomType(rg, allow_dynamic, tp ? tp->mutable_non_nullable() : nullptr);
+		return BottomType(rg, allow_dynamic_types, tp ? tp->mutable_non_nullable() : nullptr);
 	} else if (noption < 81) {
 		//array
 		this->depth++;
-		SQLType* k = this->RandomNextType(rg, true, allow_dynamic, col_counter, tp ? tp->mutable_array() : nullptr);
+		SQLType* k = this->RandomNextType(rg, true, allow_dynamic_types, col_counter, tp ? tp->mutable_array() : nullptr);
 		this->depth--;
 		return new ArrayType(k);
 	} else if (noption < 91 || this->width <= (this->max_width - 1)) {
@@ -250,8 +250,8 @@ SQLType* StatementGenerator::RandomNextType(RandomGenerator &rg, const bool allo
 		sql_query_grammar::MapType *mt = tp ? tp->mutable_map() : nullptr;
 
 		this->depth++;
-		SQLType* k = this->RandomNextType(rg, false, allow_dynamic, col_counter, mt ? mt->mutable_key() : nullptr);
-		SQLType* v = this->RandomNextType(rg, true, allow_dynamic, col_counter, mt ? mt->mutable_value() : nullptr);
+		SQLType* k = this->RandomNextType(rg, false, allow_dynamic_types, col_counter, mt ? mt->mutable_key() : nullptr);
+		SQLType* v = this->RandomNextType(rg, true, allow_dynamic_types, col_counter, mt ? mt->mutable_value() : nullptr);
 		this->depth--;
 		return new MapType(k, v);
 	} else {
@@ -269,7 +269,7 @@ SQLType* StatementGenerator::RandomNextType(RandomGenerator &rg, const bool allo
 			if (tcd) {
 				tcd->mutable_col()->set_column(cname);
 			}
-			SQLType* k = this->RandomNextType(rg, true, allow_dynamic, col_counter, tcd ? tcd->mutable_type_name() : nullptr);
+			SQLType* k = this->RandomNextType(rg, true, allow_dynamic_types, col_counter, tcd ? tcd->mutable_type_name() : nullptr);
 			subtypes.push_back(SubType(cname, k));
 		}
 		this->depth--;
@@ -479,10 +479,10 @@ void StatementGenerator::StrBuildJSONElement(RandomGenerator &rg, std::string &r
 					ret += "😂";
 					break;
 				case static_cast<int>('"'):
-					ret += "\\\"";
+					ret += "a";
 					break;
 				case static_cast<int>('\\'):
-					ret += "\\\\";
+					ret += "b";
 					break;
 				case static_cast<int>('\''):
 					ret += "''";
