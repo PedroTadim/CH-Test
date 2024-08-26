@@ -1,4 +1,5 @@
 #include <clickhouse/client.h>
+#include <cstring>
 #include <exception>
 #include "generator/statement_generator.h"
 #include "ast/sql_query_proto_to_string.h"
@@ -18,6 +19,10 @@ RunQuery(std::string &ret, chfuzz::StatementGenerator &gen, chfuzz::ClientContex
 		success = true;
 	} catch (const std::exception & e) {
 		std::cerr << "Got exception " << e.what() << std::endl;
+		if (std::strstr(e.what(), "Broken pipe")) {
+			std::cerr << "Server crashed, exiting" << std::endl;
+			std::exit(1);
+		}
 	}
 	gen.UpdateGenerator(sq, success);
 }

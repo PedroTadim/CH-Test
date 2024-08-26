@@ -4,81 +4,72 @@
 
 namespace chfuzz {
 
-SQLType* RandomIntType(RandomGenerator &rg, sql_query_grammar::Integers &res) {
+std::tuple<SQLType*, sql_query_grammar::Integers>
+RandomIntType(RandomGenerator &rg) {
 	std::uniform_int_distribution<uint32_t> next_dist(1, 12);
 	const uint32_t nopt = next_dist(rg.gen);
 
 	switch (nopt) {
 		case 1:
-			res = sql_query_grammar::Integers::UInt8;
-			return new IntType(8, true);
+			return std::make_tuple(new IntType(8, true), sql_query_grammar::Integers::UInt8);
 		case 2:
-			res = sql_query_grammar::Integers::UInt16;
-			return new IntType(16, true);
+			return std::make_tuple(new IntType(16, true), sql_query_grammar::Integers::UInt16);
 		case 3:
-			res = sql_query_grammar::Integers::UInt32;
-			return new IntType(32, true);
+			return std::make_tuple(new IntType(32, true), sql_query_grammar::Integers::UInt32);
 		case 4:
-			res = sql_query_grammar::Integers::UInt64;
-			return new IntType(64, true);
+			return std::make_tuple(new IntType(64, true), sql_query_grammar::Integers::UInt64);
 		case 5:
-			res = sql_query_grammar::Integers::UInt128;
-			return new IntType(128, true);
+			return std::make_tuple(new IntType(128, true), sql_query_grammar::Integers::UInt128);
 		case 6:
-			res = sql_query_grammar::Integers::UInt256;
-			return new IntType(256, true);
+			return std::make_tuple(new IntType(256, true), sql_query_grammar::Integers::UInt256);
 		case 7:
-			res = sql_query_grammar::Integers::Int8;
-			return new IntType(8, false);
+			return std::make_tuple(new IntType(8, false), sql_query_grammar::Integers::Int8);
 		case 8:
-			res = sql_query_grammar::Integers::Int16;
-			return new IntType(16, false);
+			return std::make_tuple(new IntType(16, false), sql_query_grammar::Integers::Int16);
 		case 9:
-			res = sql_query_grammar::Integers::Int32;
-			return new IntType(32, false);
+			return std::make_tuple(new IntType(32, false), sql_query_grammar::Integers::Int32);
 		case 10:
-			res = sql_query_grammar::Integers::Int64;
-			return new IntType(64, false);
+			return std::make_tuple(new IntType(64, false), sql_query_grammar::Integers::Int64);
 		case 11:
-			res = sql_query_grammar::Integers::Int128;
-			return new IntType(128, false);
+			return std::make_tuple(new IntType(128, false), sql_query_grammar::Integers::Int128);
+		case 12:
+			return std::make_tuple(new IntType(256, false), sql_query_grammar::Integers::Int256);
 		default:
-			res = sql_query_grammar::Integers::Int256;
-			return new IntType(256, false);
+			assert(0);
 	}
 }
 
-SQLType* RandomFloatType(RandomGenerator &rg, sql_query_grammar::FloatingPoints &res) {
-	std::uniform_int_distribution<uint32_t> next_dist(1, 12);
+std::tuple<SQLType*, sql_query_grammar::FloatingPoints>
+RandomFloatType(RandomGenerator &rg) {
+	std::uniform_int_distribution<uint32_t> next_dist(1, 2);
 	const uint32_t nopt = next_dist(rg.gen);
 
 	switch (nopt) {
 		case 1:
-			res = sql_query_grammar::FloatingPoints::Float32;
-			return new FloatType(32);
-		default:
-			res = sql_query_grammar::FloatingPoints::Float64;
-			return new FloatType(64);
-	}
-}
-
-SQLType* RandomDateType(RandomGenerator &rg, sql_query_grammar::Dates &res) {
-	std::uniform_int_distribution<uint32_t> next_dist(1, 12);
-	const uint32_t nopt = next_dist(rg.gen);
-
-	switch (nopt) {
-		case 1:
-			res = sql_query_grammar::Dates::Date;
-			return new DateType(false, false);
+			return std::make_tuple(new FloatType(32), sql_query_grammar::FloatingPoints::Float32);
 		case 2:
-			res = sql_query_grammar::Dates::Date32;
-			return new DateType(false, true);
-		case 3:
-			res = sql_query_grammar::Dates::DateTime;
-			return new DateType(true, false);
+			return std::make_tuple(new FloatType(64), sql_query_grammar::FloatingPoints::Float64);
 		default:
-			res = sql_query_grammar::Dates::DateTime64;
-			return new DateType(true, true);
+			assert(0);
+	}
+}
+
+std::tuple<SQLType*, sql_query_grammar::Dates>
+RandomDateType(RandomGenerator &rg) {
+	std::uniform_int_distribution<uint32_t> next_dist(1, 4);
+	const uint32_t nopt = next_dist(rg.gen);
+
+	switch (nopt) {
+		case 1:
+			return std::make_tuple(new DateType(false, false), sql_query_grammar::Dates::Date);
+		case 2:
+			return std::make_tuple(new DateType(false, true), sql_query_grammar::Dates::Date32);
+		case 3:
+			return std::make_tuple(new DateType(true, false), sql_query_grammar::Dates::DateTime);
+		case 4:
+			return std::make_tuple(new DateType(true, true), sql_query_grammar::Dates::DateTime64);
+		default:
+			assert(0);
 	}
 }
 
@@ -91,7 +82,7 @@ SQLType* StatementGenerator::BottomType(RandomGenerator &rg, const bool allow_dy
 		case 1: {
 			//int
 			sql_query_grammar::Integers nint;
-			res = RandomIntType(rg, nint);
+			std::tie(res, nint) = RandomIntType(rg);
 			if (tp) {
 				tp->set_integers(nint);
 			}
@@ -99,7 +90,7 @@ SQLType* StatementGenerator::BottomType(RandomGenerator &rg, const bool allow_dy
 		case 2: {
 			//float
 			sql_query_grammar::FloatingPoints nflo;
-			res = RandomFloatType(rg, nflo);
+			std::tie(res, nflo) = RandomFloatType(rg);
 			if (tp) {
 				tp->set_floats(nflo);
 			}
@@ -147,7 +138,7 @@ SQLType* StatementGenerator::BottomType(RandomGenerator &rg, const bool allow_dy
 		case 6: {
 			//dates
 			sql_query_grammar::Dates dd;
-			res = RandomDateType(rg, dd);
+			std::tie(res, dd) = RandomDateType(rg);
 			if (tp) {
 				tp->set_dates(dd);
 			}
@@ -163,7 +154,7 @@ SQLType* StatementGenerator::BottomType(RandomGenerator &rg, const bool allow_dy
 				case 1: {
 					//int
 					sql_query_grammar::Integers nint;
-					sub = RandomIntType(rg, nint);
+					std::tie(sub, nint) = RandomIntType(rg);
 					if (lcard) {
 						lcard->set_integers(nint);
 					}
@@ -171,7 +162,7 @@ SQLType* StatementGenerator::BottomType(RandomGenerator &rg, const bool allow_dy
 				case 2: {
 					//float
 					sql_query_grammar::FloatingPoints nflo;
-					sub = RandomFloatType(rg, nflo);
+					std::tie(sub, nflo) = RandomFloatType(rg);
 					if (lcard) {
 						lcard->set_floats(nflo);
 					}
@@ -179,7 +170,7 @@ SQLType* StatementGenerator::BottomType(RandomGenerator &rg, const bool allow_dy
 				case 3: {
 					//dates
 					sql_query_grammar::Dates dd;
-					sub = RandomDateType(rg, dd);
+					std::tie(sub, dd) = RandomDateType(rg);
 					if (lcard) {
 						lcard->set_dates(dd);
 					}

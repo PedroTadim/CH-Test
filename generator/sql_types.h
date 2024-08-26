@@ -5,6 +5,7 @@
 #include <optional>
 #include <memory>
 #include <vector>
+#include <tuple>
 
 #include "random_generator.h"
 #include "sql_grammar.pb.h"
@@ -256,8 +257,8 @@ public:
 	};
 };
 
-SQLType* RandomIntType(RandomGenerator &rg, sql_query_grammar::Integers &res);
-SQLType* RandomFloatType(RandomGenerator &rg, sql_query_grammar::Integers &res);
-SQLType* RandomDateType(RandomGenerator &rg, sql_query_grammar::Dates &res);
+std::tuple<SQLType*, sql_query_grammar::Integers> RandomIntType(RandomGenerator &rg);
+std::tuple<SQLType*, sql_query_grammar::FloatingPoints> RandomFloatType(RandomGenerator &rg);
+std::tuple<SQLType*, sql_query_grammar::Dates> RandomDateType(RandomGenerator &rg);
 
 }
