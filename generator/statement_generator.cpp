@@ -17,7 +17,7 @@ int StatementGenerator::GenerateNextCreateTable(ClientContext &cc, RandomGenerat
 
 	const uint32_t ncols = (rg.NextMediumNumber() % 5) + 1;
 	sql_query_grammar::CreateTableDef *ctdef = ct->mutable_def();
-	std::uniform_int_distribution<uint32_t> table_engine(1, 10);
+	std::uniform_int_distribution<uint32_t> table_engine(1, sql_query_grammar::TableEngine::TableEngineValues_MAX);
 	const uint32_t nopt = table_engine(rg.gen);
 	sql_query_grammar::TableEngine *te = ct->mutable_engine();
 	sql_query_grammar::TableEngine_TableEngineValues val = (sql_query_grammar::TableEngine_TableEngineValues) nopt;
