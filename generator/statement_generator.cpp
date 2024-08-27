@@ -13,7 +13,7 @@ int StatementGenerator::GenerateNextCreateTable(ClientContext &cc, RandomGenerat
 	const uint32_t tname = this->table_counter++;
 
 	next.tname = tname;
-	ct->mutable_est()->mutable_table_name()->set_table(next.tname);
+	ct->mutable_est()->mutable_table_name()->set_table("t" + std::to_string(next.tname));
 
 	const uint32_t ncols = (rg.NextMediumNumber() % 5) + 1;
 	sql_query_grammar::CreateTableDef *ctdef = ct->mutable_def();
@@ -30,7 +30,7 @@ int StatementGenerator::GenerateNextCreateTable(ClientContext &cc, RandomGenerat
 		sql_query_grammar::TypeName *tn = cd->mutable_type();
 
 		col.cname = cname;
-		cd->mutable_col()->set_column(cname);
+		cd->mutable_col()->set_column("c" + std::to_string(cname));
 		this->ids.push_back(cname);
 		this->max_depth = 4;
 		col.tp = RandomNextType(rg, true, true, next.col_counter, tn->mutable_type());
@@ -50,12 +50,12 @@ int StatementGenerator::GenerateNextCreateTable(ClientContext &cc, RandomGenerat
 			sql_query_grammar::TypeName *tn = cd->mutable_type();
 
 			col.cname = cname;
-			cd->mutable_col()->set_column(cname);
+			cd->mutable_col()->set_column("c" + std::to_string(cname));
 			this->ids.push_back(cname);
 			col.tp = new IntType(8, i == 1);
 			tn->mutable_type()->mutable_non_nullable()->set_integers(sql_query_grammar::Integers::Int32);
 
-			te->add_cols()->set_column(cname);
+			te->add_cols()->set_column("c" + std::to_string(cname));
 		}
 	}
 
@@ -68,7 +68,7 @@ int StatementGenerator::GenerateNextCreateTable(ClientContext &cc, RandomGenerat
 
 			std::shuffle(ids.begin(), ids.end(), rg.gen);
 			for (uint32_t i = 0; i < ocols ; i++) {
-				tob->add_exprs()->mutable_comp_expr()->mutable_expr_stc()->mutable_col()->mutable_col()->set_column(ids[i]);
+				tob->add_exprs()->mutable_comp_expr()->mutable_expr_stc()->mutable_col()->mutable_col()->set_column("c" + std::to_string(ids[i]));
 			}
 		}
 	}
@@ -79,15 +79,15 @@ int StatementGenerator::GenerateNextCreateTable(ClientContext &cc, RandomGenerat
 }
 
 int StatementGenerator::GenerateNextDropTable(ClientContext &cc, RandomGenerator &rg, sql_query_grammar::DropTable *dp) {
-	const SQLTable &t = rg.PickKeyRandomlyFromMap(this->tables);
+	const SQLTable &t = rg.PickValueRandomlyFromMap(this->tables);
 
 	dp->set_if_empty(rg.NextSmallNumber() < 4);
-	dp->mutable_est()->mutable_table_name()->set_table(t.tname);
+	dp->mutable_est()->mutable_table_name()->set_table("t" + std::to_string(t.tname));
 	return 0;
 }
 
 int StatementGenerator::GenerateNextOptimizeTable(ClientContext &cc, RandomGenerator &rg, sql_query_grammar::OptimizeTable *ot) {
-	const SQLTable &t = rg.PickKeyRandomlyFromMap(this->tables);
+	const SQLTable &t = rg.PickValueRandomlyFromMap(this->tables);
 
 	if (rg.NextSmallNumber() < 4) {
 		sql_query_grammar::DeduplicateExpr *dde = ot->mutable_dedup();
@@ -103,40 +103,40 @@ int StatementGenerator::GenerateNextOptimizeTable(ClientContext &cc, RandomGener
 			for (uint32_t i = 0; i < ocols; i++) {
 				sql_query_grammar::ExprColumn *ec = i == 0 ? ecl->mutable_col() : ecl->add_extra_cols();
 
-				ec->mutable_col()->set_column(ids[i]);
+				ec->mutable_col()->set_column("c" + std::to_string(ids[i]));
 			}
 			ids.clear();
 		}
 	}
 	ot->set_final(rg.NextSmallNumber() < 4);
-	ot->mutable_est()->mutable_table_name()->set_table(t.tname);
+	ot->mutable_est()->mutable_table_name()->set_table("t" + std::to_string(t.tname));
 	return 0;
 }
 
 int StatementGenerator::GenerateNextCheckTable(ClientContext &cc, RandomGenerator &rg, sql_query_grammar::CheckTable *ct) {
-	const SQLTable &t = rg.PickKeyRandomlyFromMap(this->tables);
+	const SQLTable &t = rg.PickValueRandomlyFromMap(this->tables);
 
 	ct->set_single_result(rg.NextSmallNumber() < 4);
-	ct->mutable_est()->mutable_table_name()->set_table(t.tname);
+	ct->mutable_est()->mutable_table_name()->set_table("t" + std::to_string(t.tname));
 	return 0;
 }
 
 int StatementGenerator::GenerateNextDescTable(ClientContext &cc, RandomGenerator &rg, sql_query_grammar::DescTable *dt) {
-	const SQLTable &t = rg.PickKeyRandomlyFromMap(this->tables);
+	const SQLTable &t = rg.PickValueRandomlyFromMap(this->tables);
 
 	dt->set_sub_cols(rg.NextSmallNumber() < 4);
-	dt->mutable_est()->mutable_table_name()->set_table(t.tname);
+	dt->mutable_est()->mutable_table_name()->set_table("t" + std::to_string(t.tname));
 	return 0;
 }
 
 int StatementGenerator::GenerateNextInsert(ClientContext &cc, RandomGenerator &rg, sql_query_grammar::Insert *ins) {
-	const SQLTable &t = rg.PickKeyRandomlyFromMap(this->tables);
+	const SQLTable &t = rg.PickValueRandomlyFromMap(this->tables);
 	const uint32_t nrows = rg.NextMediumNumber(), ncols = t.cols.size();
 	std::string ret;
 
-	ins->mutable_est()->mutable_table_name()->set_table(t.tname);
+	ins->mutable_est()->mutable_table_name()->set_table("t" + std::to_string(t.tname));
 	for (const auto &entry : t.cols) {
-		ins->add_cols()->set_column(entry.second.cname);
+		ins->add_cols()->set_column("c" + std::to_string(entry.second.cname));
 	}
 	this->max_depth = 4;
 	for (uint32_t i = 0 ; i < nrows; i++) {
@@ -162,17 +162,17 @@ int StatementGenerator::GenerateNextInsert(ClientContext &cc, RandomGenerator &r
 }
 
 int StatementGenerator::GenerateNextDelete(ClientContext &cc, RandomGenerator &rg, sql_query_grammar::Delete *del) {
-	const SQLTable &t = rg.PickKeyRandomlyFromMap(this->tables);
+	const SQLTable &t = rg.PickValueRandomlyFromMap(this->tables);
 
-	del->mutable_est()->mutable_table_name()->set_table(t.tname);
+	del->mutable_est()->mutable_table_name()->set_table("t" + std::to_string(t.tname));
 	del->mutable_where()->mutable_expr()->mutable_expr()->mutable_lit_val()->set_special_val(sql_query_grammar::SpecialVal::VAL_TRUE);
 	return 0;
 }
 
 int StatementGenerator::GenerateNextTruncate(ClientContext &cc, RandomGenerator &rg, sql_query_grammar::Truncate *trunc) {
-	const SQLTable &t = rg.PickKeyRandomlyFromMap(this->tables);
+	const SQLTable &t = rg.PickValueRandomlyFromMap(this->tables);
 
-	trunc->mutable_est()->mutable_table_name()->set_table(t.tname);
+	trunc->mutable_est()->mutable_table_name()->set_table("t" + std::to_string(t.tname));
 	return 0;
 }
 
@@ -181,8 +181,8 @@ int StatementGenerator::GenerateNextExchangeTables(ClientContext &cc, RandomGene
 		this->ids.push_back(entries.first);
 	}
 	std::shuffle(this->ids.begin(), this->ids.end(), rg.gen);
-	et->mutable_est1()->mutable_table_name()->set_table(this->ids[0]);
-	et->mutable_est2()->mutable_table_name()->set_table(this->ids[1]);
+	et->mutable_est1()->mutable_table_name()->set_table("t" + std::to_string(this->ids[0]));
+	et->mutable_est2()->mutable_table_name()->set_table("t" + std::to_string(this->ids[1]));
 	ids.clear();
 	return 0;
 }
@@ -254,21 +254,21 @@ void StatementGenerator::UpdateGenerator(const sql_query_grammar::SQLQuery &sq, 
 	const sql_query_grammar::SQLQueryInner &query = sq.has_inner_query() ? sq.inner_query() : sq.explain().inner_query();
 
 	if (sq.has_inner_query() && query.has_create_table()) {
-		const uint32_t tname = query.create_table().est().table_name().table();
+		const uint32_t tname = static_cast<uint32_t>(std::stoul(query.create_table().est().table_name().table().substr(1)));
 
 		if (success) {
 			this->tables[tname] = std::move(this->staged_tables[tname]);
 		}
 		this->staged_tables.erase(tname);
 	} else if (sq.has_inner_query() && query.has_drop_table()) {
-		const uint32_t tname = query.drop_table().est().table_name().table();
+		const uint32_t tname = static_cast<uint32_t>(std::stoul(query.drop_table().est().table_name().table().substr(1)));
 
 		if (success) {
 			this->tables.erase(tname);
 		}
 	} else if (sq.has_inner_query() && query.has_exchange()) {
-		const uint32_t tname1 = query.exchange().est1().table_name().table(),
-					   tname2 = query.exchange().est2().table_name().table();
+		const uint32_t tname1 = static_cast<uint32_t>(std::stoul(query.exchange().est1().table_name().table().substr(1))),
+					   tname2 = static_cast<uint32_t>(std::stoul(query.exchange().est2().table_name().table().substr(1)));
 		SQLTable tx = std::move(this->tables[tname1]), ty = std::move(this->tables[tname2]);
 
 		tx.tname = tname2;

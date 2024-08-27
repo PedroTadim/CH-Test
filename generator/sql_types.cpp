@@ -220,6 +220,14 @@ SQLType* StatementGenerator::BottomType(RandomGenerator &rg, const bool allow_dy
 	return res;
 }
 
+SQLType* StatementGenerator::GenerateArraytype(RandomGenerator &rg, const bool allow_nullable, const bool allow_dynamic_types,
+											   uint32_t &col_counter, sql_query_grammar::TopTypeName *tp) {
+	this->depth++;
+	SQLType* k = this->RandomNextType(rg, true, allow_dynamic_types, col_counter, tp);
+	this->depth--;
+	return new ArrayType(k);
+}
+
 SQLType* StatementGenerator::RandomNextType(RandomGenerator &rg, const bool allow_nullable, const bool allow_dynamic_types,
 											uint32_t &col_counter, sql_query_grammar::TopTypeName *tp) {
 	const uint32_t noption = rg.NextMediumNumber();
@@ -232,10 +240,7 @@ SQLType* StatementGenerator::RandomNextType(RandomGenerator &rg, const bool allo
 		return BottomType(rg, allow_dynamic_types, tp ? tp->mutable_non_nullable() : nullptr);
 	} else if (noption < 81) {
 		//array
-		this->depth++;
-		SQLType* k = this->RandomNextType(rg, true, allow_dynamic_types, col_counter, tp ? tp->mutable_array() : nullptr);
-		this->depth--;
-		return new ArrayType(k);
+		return GenerateArraytype(rg, true, allow_dynamic_types, col_counter, tp ? tp->mutable_array() : nullptr);
 	} else if (noption < 91 || this->width <= (this->max_width - 1)) {
 		//map
 		sql_query_grammar::MapType *mt = tp ? tp->mutable_map() : nullptr;
@@ -258,7 +263,7 @@ SQLType* StatementGenerator::RandomNextType(RandomGenerator &rg, const bool allo
 				(i == 0) ? tt->mutable_value1() : ((i == 1) ? tt->mutable_value2() : tt->add_others())) : nullptr;
 
 			if (tcd) {
-				tcd->mutable_col()->set_column(cname);
+				tcd->mutable_col()->set_column("c" + std::to_string(cname));
 			}
 			SQLType* k = this->RandomNextType(rg, true, allow_dynamic_types, col_counter, tcd ? tcd->mutable_type_name() : nullptr);
 			subtypes.push_back(SubType(cname, k));

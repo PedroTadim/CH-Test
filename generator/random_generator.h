@@ -180,7 +180,7 @@ public:
 	}
 
 	template <typename K, typename V>
-	const V& PickKeyRandomlyFromMap(const std::map<K,V> &vals) {
+	const V& PickValueRandomlyFromMap(const std::map<K,V> &vals) {
 		std::uniform_int_distribution<size_t> d{0, vals.size() - 1};
 		auto it = vals.begin();
 		std::advance(it, d(gen));

@@ -22,20 +22,13 @@ CONV_FN(Select, select);
 // ~~~~Numbered values to string~~~
 // WARNING does not include space at the end
 
-static void inline
-ColumnToString(std::string &ret, const uint32_t col) {
-  ret += "c";
-  ret += std::to_string(col);
-}
-
 CONV_FN(Column, col) {
-  ColumnToString(ret, col.column());
+  ret += col.column();
 }
 
 // WARNING does not include space at the end
 CONV_FN(Table, table) {
-  ret += "t";
-  ret += std::to_string(table.table());
+  ret += table.table();
 }
 
 CONV_FN(ExprColAlias, eca) {
@@ -348,8 +341,8 @@ BuildJson(std::string &ret, const int depth, const int width, std::mt19937 &gen)
       if (i != 0) {
         ret += ",";
       }
-      ret += "\"";
-      ColumnToString(ret, copt(gen));
+      ret += "\"c";
+      ret += std::to_string(copt(gen));
       ret += "\":";
       switch (noption) {
         case 1: //object
@@ -1025,8 +1018,7 @@ CONV_FN(JoinConstraint, jc) {
     ExprColumnListToString(ret, jc.using_expr().col_list());
     ret += ")";
   } else {
-    ret += " ON ";
-    ExprToString(ret, jc.def_expr());
+    ret += " ON TRUE";
   }
 }
 
@@ -1036,15 +1028,15 @@ CONV_FN(JoinCore, jcc) {
   if (jcc.global()) {
     ret += " GLOBAL";
   }
+  if (jcc.join_op() != sql_query_grammar::JoinCore_JoinType::JoinCore_JoinType_INNER ||
+      !jcc.has_join_const() ||
+      jcc.join_const() != sql_query_grammar::JoinCore_JoinConst::JoinCore_JoinConst_ASOF) {
+    ret += " ";
+    ret += JoinCore_JoinType_Name(jcc.join_op());
+  }
   if (!has_cross_or_paste && jcc.has_join_const()) {
     ret += " ";
     ret += JoinCore_JoinConst_Name(jcc.join_const());
-  }
-  ret += " ";
-  ret += JoinCore_JoinType_Name(jcc.join_op());
-  if (!has_cross_or_paste && jcc.has_join_range()) {
-    ret += " ";
-    ret += JoinCore_JoinRange_Name(jcc.join_range());
   }
   ret += " JOIN ";
   TableOrSubqueryToString(ret, jcc.tos());
@@ -1066,8 +1058,6 @@ CONV_FN(JoinClauseCore, jcc) {
     JoinCoreToString(ret, jcc.core());
   } else if (jcc.has_core()) {
     ArrayJoinToString(ret, jcc.arr());
-  } else {
-    JoinCoreToString(ret, jcc.def_core());
   }
 }
 
@@ -1090,6 +1080,10 @@ CONV_FN(JoinedTable, jt) {
   if (jt.final()) {
     ret += " FINAL";
   }
+  if (jt.has_table_alias()) {
+    ret += " ";
+    TableToString(ret, jt.table_alias());
+  }
 }
 
 CONV_FN(TableOrSubquery, tos) {
@@ -1101,7 +1095,7 @@ CONV_FN(TableOrSubquery, tos) {
   } else if (tos.has_jdq()) {
     JoinedDerivedQueryToString(ret, tos.jdq());
   } else {
-    JoinedTableToString(ret, tos.def_joined_table());
+    ret += "(SELECT 1 c0) t0";
   }
 }
 
@@ -1250,7 +1244,7 @@ CONV_FN(Select, select) {
   } else if (select.has_set_query()) {
     SetQueryToString(ret, select.set_query());
   } else {
-    SelectStatementCoreToString(ret, select.def_sel());
+    ret += "1";
   }
 }
 
@@ -1361,7 +1355,9 @@ CONV_FN(Insert, insert) {
   if (insert.has_values()) {
     ValuesStatementToString(ret, insert.values());
   } else if (insert.has_select()) {
-    SelectStatementCoreToString(ret, insert.select());
+    ret += "SELECT * FROM (";
+    SelectToString(ret, insert.select());
+    ret += ")";
   } else if (insert.has_query()) {
     ret += "VALUES ";
     ret += insert.query();

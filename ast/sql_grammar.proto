@@ -5,11 +5,11 @@ package sql_query_grammar;
 import "sql_funcs.proto";
 
 message Table {
-  required uint32 table = 1;
+  required string table = 1;
 }
 
 message Column {
-  required uint32 column = 1;
+  required string column = 1;
 }
 
 enum SpecialVal {
@@ -283,33 +283,29 @@ message JoinConstraint {
     Expr on_expr = 1;
     UsingExpr using_expr = 2;
   }
-  required Expr def_expr = 3;
 }
 
 message JoinCore {
-  enum JoinConst {
-    ANY = 1;
-    ALL = 2;
-    ASOF = 3;
-  }
   enum JoinType {
     LEFT = 1;
     INNER = 2;
     RIGHT = 3;
     FULL = 4;
-    CROSS = 5;
-    PASTE = 6;
+    PASTE = 5;
+    CROSS = 6;
   }
-  enum JoinRange {
-    SEMI = 1;
-    ANTI = 2;
+  enum JoinConst {
+    ANY = 1;
+    ALL = 2;
+    SEMI = 3;
+    ANTI = 4;
+    ASOF = 5;
   }
   optional bool global = 1;
-  optional JoinConst join_const = 2;
-  required JoinType join_op = 3;
-  optional JoinRange join_range = 4;
-  required TableOrSubquery tos = 5;
-  required JoinConstraint join_constraint = 6;
+  optional JoinType join_op = 2;
+  optional JoinConst join_const = 3;
+  required TableOrSubquery tos = 4;
+  required JoinConstraint join_constraint = 5;
 }
 
 message ArrayJoin {
@@ -322,7 +318,6 @@ message JoinClauseCore {
     JoinCore core = 1;
     ArrayJoin arr = 2;
   }
-  required JoinCore def_core = 3;
 }
 
 message JoinClause {
@@ -338,6 +333,7 @@ message JoinedDerivedQuery {
 message JoinedTable {
   required ExprSchemaTable est = 1;
   optional bool final = 2;
+  optional Table table_alias = 3;
 }
 
 message TableOrSubquery {
@@ -346,7 +342,6 @@ message TableOrSubquery {
     JoinedDerivedQuery jdq = 2;
     JoinedQuery jq = 3;
   }
-  required JoinedTable def_joined_table = 4;  // used if the oneof is empty
 }
 
 message JoinedQuery {
@@ -440,7 +435,6 @@ message Select {
     SelectStatementCore select_core = 1;
     SetQuery set_query = 2;
   }
-  required SelectStatementCore def_sel = 3;
 }
 
 enum Integers {
@@ -629,7 +623,7 @@ message Insert {
   repeated Column cols = 2;
   oneof insert_oneof {
     ValuesStatement values = 3;
-    SelectStatementCore select = 4;
+    Select select = 4;
     string query = 5;
   }
 }

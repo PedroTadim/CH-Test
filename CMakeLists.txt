@@ -15,6 +15,7 @@ add_executable(ast_fuzz
 fuzz.cpp
 ast/sql_query_proto_to_string.cpp
 generator/sql_query.cpp
+generator/sql_expression.cpp
 generator/sql_types.cpp
 generator/statement_generator.cpp
 ${FUNCS_SRC} ${FUNCS_HDR} ${GRAMMAR_SRC} ${GRAMMAR_HDR})
