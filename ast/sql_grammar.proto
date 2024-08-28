@@ -370,7 +370,7 @@ message WhereStatement {
   required ExprComparisonHighProbability expr = 1;
 }
 
-message GroupByStatement {
+message GroupByList {
   enum GroupingSets {
     ROLLUP = 1;
     CUBE = 2;
@@ -378,7 +378,14 @@ message GroupByStatement {
   required ExprList exprs = 1;
   optional GroupingSets gs = 2;
   optional bool with_totals = 3;
-  optional Expr having_expr = 4;
+}
+
+message GroupByStatement {
+  oneof group_by_oneof {
+    GroupByList glist = 1;
+    bool gall = 2;
+  }
+  optional Expr having_expr = 3;
 }
 
 message ExprOrderingTerm {
@@ -399,6 +406,7 @@ message LimitStatement {
   required uint32 limit = 1;
   optional uint32 offset = 2;
   optional bool with_ties = 3;
+  optional Expr limit_by = 4;
 }
 
 enum AllOrDistinct {

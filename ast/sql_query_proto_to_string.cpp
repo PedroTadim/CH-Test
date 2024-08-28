@@ -1134,15 +1134,24 @@ CONV_FN(WhereStatement, ws) {
   ExprComparisonHighProbabilityToString(ret, ws.expr());
 }
 
+CONV_FN(GroupByList, gbl) {
+  ExprListToString(ret, gbl.exprs());
+  if (gbl.has_gs()) {
+    ret += " WITH ";
+    ret += GroupByList_GroupingSets_Name(gbl.gs());
+  }
+  if (gbl.with_totals()) {
+    ret += " WITH TOTALS";
+  }
+}
+
+
 CONV_FN(GroupByStatement, gbs) {
   ret += "GROUP BY ";
-  ExprListToString(ret, gbs.exprs());
-  if (gbs.has_gs()) {
-    ret += " WITH ";
-    ret += GroupByStatement_GroupingSets_Name(gbs.gs());
-  }
-  if (gbs.with_totals()) {
-    ret += " WITH TOTALS";
+  if (gbs.has_glist()) {
+    GroupByListToString(ret, gbs.glist());
+  } else {
+    ret += "ALL";
   }
   if (gbs.has_having_expr()) {
     ret += " HAVING ";
@@ -1169,13 +1178,17 @@ CONV_FN(OrderByStatement, obs) {
 
 CONV_FN(LimitStatement, ls) {
   ret += "LIMIT ";
-  ret += std::to_string(ls.limit() % 100);
+  ret += std::to_string(ls.limit());
   if (ls.has_offset()) {
-    ret += ", ";
-    ret += std::to_string(ls.offset() % 100);
+    ret += " OFFSET ";
+    ret += std::to_string(ls.offset());
   }
   if (ls.with_ties()) {
     ret += " WITH TIES";
+  }
+  if (ls.has_limit_by()) {
+    ret += " BY ";
+    ExprToString(ret, ls.limit_by());
   }
 }
 

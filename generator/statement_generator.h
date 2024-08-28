@@ -11,12 +11,13 @@ namespace chfuzz {
 
 class SQLRelationCol {
 public:
+	std::string rel_name;
 	std::string name;
 	SQLType* tp;
 
 	SQLRelationCol() {}
 
-	SQLRelationCol(const std::string n, SQLType* sqltp) : name(n), tp(sqltp) {}
+	SQLRelationCol(const std::string rname, const std::string n, SQLType* sqltp) : rel_name(rname), name(n), tp(sqltp) {}
 };
 
 class SQLRelation {
@@ -31,7 +32,9 @@ public:
 
 class QueryLevel {
 public:
+	bool global_aggregate;
 	uint32_t level, aliases_counter = 0;
+	std::vector<SQLRelationCol> gcols;
 	std::vector<SQLRelation> rels;
 
 	QueryLevel() {}
@@ -45,7 +48,7 @@ private:
 	std::map<uint32_t, SQLTable> staged_tables, tables;
 
 	std::vector<uint32_t> ids;
-	int depth = 0, width = 0, max_depth = 10, max_width = 10, max_tables = 10;
+	uint32_t depth = 0, width = 0, max_depth = 10, max_width = 10, max_tables = 10;
 
 	std::map<uint32_t, QueryLevel> levels;
 
@@ -58,11 +61,6 @@ private:
 	void StrBuildJSONArray(RandomGenerator &rg, const int depth, const int width, std::string &ret);
 	void StrBuildJSONElement(RandomGenerator &rg, std::string &ret);
 	void StrBuildJSON(RandomGenerator &rg, const int depth, const int width, std::string &ret);
-public:
-
-	SQLType* BottomType(RandomGenerator &rg, const bool allow_dynamic_types, sql_query_grammar::BottomTypeName *tp);
-	SQLType* GenerateArraytype(RandomGenerator &rg, const bool allow_nullable, const bool allow_dynamic_types, uint32_t &col_counter, sql_query_grammar::TopTypeName *tp);
-	SQLType* RandomNextType(RandomGenerator &rg, const bool allow_nullable, const bool allow_dynamic_types, uint32_t &col_counter, sql_query_grammar::TopTypeName *tp);
 
 	int GenerateNextCreateTable(ClientContext &cc, RandomGenerator &rg, sql_query_grammar::CreateTable *sq);
 	int GenerateNextDropTable(ClientContext &cc, RandomGenerator &rg, sql_query_grammar::DropTable *sq);
@@ -74,19 +72,31 @@ public:
 	int GenerateNextDescTable(ClientContext &cc, RandomGenerator &rg, sql_query_grammar::DescTable *sq);
 	int GenerateNextExchangeTables(ClientContext &cc, RandomGenerator &rg, sql_query_grammar::ExchangeTables *sq);
 
+	int GenerateLiteralValue(ClientContext &cc, RandomGenerator &rg, SQLType *tp, sql_query_grammar::Expr *expr);
 	int GeneratePredicate(ClientContext &cc, RandomGenerator &rg, sql_query_grammar::Expr *expr);
 	int GenerateExpression(ClientContext &cc, RandomGenerator &rg, SQLType *tp, sql_query_grammar::Expr *expr);
 
-	void AddJoinClause(ClientContext &cc, RandomGenerator &rg, sql_query_grammar::BinaryExpr *bexpr);
+	int GenerateOrderBy(ClientContext &cc, RandomGenerator &rg, sql_query_grammar::OrderByStatement *ob);
+	int GenerateLimit(ClientContext &cc, RandomGenerator &rg, const bool has_order_by, sql_query_grammar::LimitStatement *ls);
+	int GenerateGroupBy(ClientContext &cc, RandomGenerator &rg, sql_query_grammar::GroupByStatement *gb);
+	int AddWhereFilter(ClientContext &cc, RandomGenerator &rg, sql_query_grammar::BinaryExpr *bexpr);
+	int GenerateWherePredicate(ClientContext &cc, RandomGenerator &rg, sql_query_grammar::Expr *expr);
+	int AddJoinClause(ClientContext &cc, RandomGenerator &rg, sql_query_grammar::BinaryExpr *bexpr);
 	int GenerateArrayJoin(ClientContext &cc, RandomGenerator &rg, sql_query_grammar::ArrayJoin *aj);
 	int GenerateFromElement(ClientContext &cc, RandomGenerator &rg, sql_query_grammar::TableOrSubquery *tos);
 	int GenerateJoinConstraint(ClientContext &cc, RandomGenerator &rg, sql_query_grammar::JoinConstraint *jc);
 	int GenerateFromStatement(ClientContext &cc, RandomGenerator &rg, sql_query_grammar::FromStatement *ft);
-	int GenerateSelect(ClientContext &cc, RandomGenerator &rg, std::vector<SQLType*> cols, sql_query_grammar::Select *sel);
-	int GenerateTopSelect(ClientContext &cc, RandomGenerator &rg, sql_query_grammar::TopSelect *sq);
+	int GenerateSelect(ClientContext &cc, RandomGenerator &rg, const bool top, const std::vector<SQLType*> &cols, sql_query_grammar::Select *sel);
 
+	int GenerateTopSelect(ClientContext &cc, RandomGenerator &rg, sql_query_grammar::TopSelect *sq);
 	int GenerateNextExplain(ClientContext &cc, RandomGenerator &rg, sql_query_grammar::ExplainQuery *sq);
 	int GenerateNextQuery(ClientContext &cc, RandomGenerator &rg, sql_query_grammar::SQLQueryInner *sq);
+
+	SQLType* BottomType(RandomGenerator &rg, const bool allow_dynamic_types, sql_query_grammar::BottomTypeName *tp);
+	SQLType* GenerateArraytype(RandomGenerator &rg, const bool allow_nullable, const bool allow_dynamic_types, uint32_t &col_counter, sql_query_grammar::TopTypeName *tp);
+	SQLType* RandomNextType(RandomGenerator &rg, const bool allow_nullable, const bool allow_dynamic_types, uint32_t &col_counter, sql_query_grammar::TopTypeName *tp);
+public:
+
 	int GenerateNextStatement(ClientContext &cc, RandomGenerator &rg, sql_query_grammar::SQLQuery &sq);
 
 	void UpdateGenerator(const sql_query_grammar::SQLQuery &sq, const bool success);
