@@ -211,10 +211,11 @@ int StatementGenerator::AddWhereFilter(ClientContext &cc, RandomGenerator &rg, s
 int StatementGenerator::GenerateWherePredicate(ClientContext &cc, RandomGenerator &rg, sql_query_grammar::Expr *expr) {
 	this->depth++;
 	if (!this->levels[this->current_level].rels.empty() && rg.NextSmallNumber() < 8) {
-		const uint32_t nclauses = (rg.NextSmallNumber() % 4) + 1;
+		const uint32_t nclauses = std::max(std::min(this->max_width - this->width, (rg.NextSmallNumber() % 4) + 1), UINT32_C(1));
 		sql_query_grammar::BinaryExpr *bexpr = expr->mutable_comp_expr()->mutable_binary_expr();
 
 		for (uint32_t i = 0 ; i < nclauses; i++) {
+			this->width++;
 			if (i == nclauses - 1) {
 				AddWhereFilter(cc, rg, bexpr);
 			} else {
@@ -222,7 +223,6 @@ int StatementGenerator::GenerateWherePredicate(ClientContext &cc, RandomGenerato
 				bexpr->set_op(rg.NextSmallNumber() < 8 ? sql_query_grammar::BinaryOperator::BINOP_AND : sql_query_grammar::BinaryOperator::BINOP_OR);
 				bexpr = bexpr->mutable_rhs()->mutable_comp_expr()->mutable_binary_expr();
 			}
-			this->width++;
 		}
 		this->width -= nclauses;
 	} else {
@@ -238,12 +238,13 @@ int StatementGenerator::GenerateFromStatement(ClientContext &cc, RandomGenerator
 	const uint32_t njoined = std::min(this->max_width - this->width, (rg.NextMediumNumber() % UINT32_C(4)) + 1);
 
 	this->depth++;
-	GenerateFromElement(cc, rg, jc->mutable_tos());
 	this->width++;
+	GenerateFromElement(cc, rg, jc->mutable_tos());
 	for (uint32_t i = 1 ; i < njoined; i++) {
 		sql_query_grammar::JoinClauseCore *jcc = jc->add_clauses();
 
 		this->depth++;
+		this->width++;
 		if (rg.NextSmallNumber() < 3) {
 			GenerateArrayJoin(cc, rg, jcc->mutable_arr());
 		} else {
@@ -269,7 +270,6 @@ int StatementGenerator::GenerateFromStatement(ClientContext &cc, RandomGenerator
 			GenerateFromElement(cc, rg, core->mutable_tos());
 			GenerateJoinConstraint(cc, rg, core->mutable_join_constraint());
 		}
-		this->width++;
 	}
 	this->width -= njoined;
 	this->depth -= njoined;
@@ -297,6 +297,7 @@ int StatementGenerator::GenerateGroupBy(ClientContext &cc, RandomGenerator &rg, 
 		for (uint32_t i = 0 ; i < nclauses; i++) {
 			sql_query_grammar::Expr *expr = i == 0 ? elist->mutable_expr() : elist->add_extra_exprs();
 
+			this->width++;
 			if (!available_cols.empty() && rg.NextSmallNumber() < 10) {
 				const SQLRelationCol &rel_col = available_cols[i];
 				sql_query_grammar::ExprSchemaTableColumn *estc = expr->mutable_comp_expr()->mutable_expr_stc();
@@ -308,7 +309,6 @@ int StatementGenerator::GenerateGroupBy(ClientContext &cc, RandomGenerator &rg, 
 			} else {
 				GenerateExpression(cc, rg, expr);
 			}
-			this->width++;
 		}
 		this->width -= nclauses;
 		this->levels[this->current_level].gcols = std::move(gcols);
@@ -351,6 +351,7 @@ int StatementGenerator::GenerateOrderBy(ClientContext &cc, RandomGenerator &rg, 
 		sql_query_grammar::Expr *expr = eot->mutable_expr();
 		const int next_option = rg.NextSmallNumber();
 
+		this->width++;
 		if (!available_cols.empty() && next_option < 6) {
 			const SQLRelationCol &src = available_cols[i];
 			sql_query_grammar::ExprSchemaTableColumn *estc = expr->mutable_comp_expr()->mutable_expr_stc();
@@ -369,7 +370,6 @@ int StatementGenerator::GenerateOrderBy(ClientContext &cc, RandomGenerator &rg, 
 		if (rg.NextSmallNumber() < 7) {
 			eot->set_asc_desc(rg.NextBool() ? sql_query_grammar::ExprOrderingTerm_AscDesc::ExprOrderingTerm_AscDesc_ASC : sql_query_grammar::ExprOrderingTerm_AscDesc::ExprOrderingTerm_AscDesc_DESC);
 		}
-		this->width++;
 	}
 	this->width -= nclauses;
 	this->depth--;
@@ -412,11 +412,11 @@ int StatementGenerator::GenerateLimit(ClientContext &cc, RandomGenerator &rg, co
 		ls->set_offset(noffset);
 	}
 	ls->set_with_ties(has_order_by && !has_distinct && rg.NextSmallNumber() < 7);
-	if (this->depth < this->max_depth && rg.NextSmallNumber() < 4) {
+	if (rg.NextSmallNumber() < 4) {
 		const int next_option = rg.NextSmallNumber();
 		sql_query_grammar::Expr *expr = ls->mutable_limit_by();
 
-		if (next_option < 4) {
+		if (this->depth >= this->max_depth || next_option < 4) {
 			sql_query_grammar::LiteralValue *lv = expr->mutable_lit_val();
 
 			lv->set_uint_lit((rg.NextRandomUInt64() % ncols) + 1);
@@ -440,12 +440,13 @@ int StatementGenerator::GenerateSelect(ClientContext &cc, RandomGenerator &rg, c
 
 		this->depth++;
 		this->current_level++;
+		this->width++;
 		res = std::max<int>(res, GenerateSelect(cc, rg, false, ncols, setq->mutable_sel1()));
 		this->width++;
 		res = std::max<int>(res, GenerateSelect(cc, rg, false, ncols, setq->mutable_sel2()));
 		this->current_level--;
 		this->depth--;
-		this->width--;
+		this->width-=2;
 	} else {
 		sql_query_grammar::SelectStatementCore *ssc = sel->mutable_select_core();
 
@@ -473,6 +474,7 @@ int StatementGenerator::GenerateSelect(ClientContext &cc, RandomGenerator &rg, c
 		for (uint32_t i = 0 ; i < ncols; i++) {
 			sql_query_grammar::ExprColAlias *eca = ssc->add_result_columns()->mutable_eca();
 
+			this->width++;
 			GenerateExpression(cc, rg, eca->mutable_expr());
 			if (!top) {
 				const std::string cname = "c" + std::to_string(this->levels[this->current_level].aliases_counter++);
@@ -482,7 +484,6 @@ int StatementGenerator::GenerateSelect(ClientContext &cc, RandomGenerator &rg, c
 				this->levels[this->current_level].rels.push_back(std::move(rel));
 				eca->mutable_col_alias()->set_column(cname);
 			}
-			this->width++;
 		}
 		this->depth--;
 		this->width -= ncols;
