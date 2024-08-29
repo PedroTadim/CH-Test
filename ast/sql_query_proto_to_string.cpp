@@ -161,22 +161,14 @@ CONV_FN(JSONColumn, jcol) {
     TypeNameToString(ret, jcol.json_reinterpret());
     ret += "`";
   }
-  if (jcol.has_field()) {
-    NestedFieldToString(ret, jcol.field());
-  }
-}
-
-CONV_FN(JSONColumns, jcols) {
-  for (int i = 0; i < jcols.subcols_size(); i++) {
-    JSONColumnToString(ret, jcols.subcols(i));
-  }
 }
 
 CONV_FN(FieldAccess, fa) {
-  if (fa.has_jcols()) {
-    JSONColumnsToString(ret, fa.jcols());
-  } else if (fa.has_nfield()) {
-    NestedFieldToString(ret, fa.nfield());
+  for (int i = 0; i < fa.subcols_size(); i++) {
+    JSONColumnToString(ret, fa.subcols(i));
+  }
+  if (fa.has_field()) {
+    NestedFieldToString(ret, fa.field());
   }
 }
 

@@ -80,18 +80,11 @@ message JSONColumn {
     TypeName json_cast = 4;
     TypeName json_reinterpret = 5;
   }
-  optional NestedField field = 6;
-}
-
-message JSONColumns {
-  repeated JSONColumn subcols = 1;
 }
 
 message FieldAccess {
-  oneof field_oneof {
-    JSONColumns jcols = 1;
-    NestedField nfield = 2;
-  }
+  repeated JSONColumn subcols = 1;
+  optional NestedField field = 2;
 }
 
 message ExprColumn {
