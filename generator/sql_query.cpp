@@ -16,12 +16,14 @@ int StatementGenerator::GenerateArrayJoin(ClientContext &cc, RandomGenerator &rg
 	if (rg.NextSmallNumber() < 8) {
 		const SQLRelation &rel1 = rg.PickRandomlyFromVector(this->levels[this->current_level].rels);
 		const SQLRelationCol &col1 = rg.PickRandomlyFromVector(rel1.cols);
+		sql_query_grammar::ComplicatedExpr *cexpr = expr->mutable_comp_expr();
+		sql_query_grammar::ExprSchemaTableColumn *estc = cexpr->mutable_expr_stc();
 
-		sql_query_grammar::ExprSchemaTableColumn *estc1 = expr->mutable_comp_expr()->mutable_expr_stc();
 		if (rel1.name != "") {
-			estc1->mutable_table()->set_table(rel1.name);
+			estc->mutable_table()->set_table(rel1.name);
 		}
-		estc1->mutable_col()->mutable_col()->set_column(col1.name);
+		estc->mutable_col()->mutable_col()->set_column(col1.name);
+		AddFieldAccess(cc, rg, cexpr);
 		tp = col1.tp;
 	} else {
 		tp = GenerateArraytype(rg, true, true);
@@ -121,8 +123,11 @@ int StatementGenerator::AddJoinClause(ClientContext &cc, RandomGenerator &rg, sq
 	bexpr->set_op(rg.NextSmallNumber() < 8 ? sql_query_grammar::BinaryOperator::BINOP_EQ : (sql_query_grammar::BinaryOperator) ((rg.NextRandomUInt32() % (uint32_t) sql_query_grammar::BinaryOperator::BINOP_LEGR) + 1));
 	const SQLRelationCol &col1 = rg.PickRandomlyFromVector(rel1->cols),
 						 &col2 = rg.PickRandomlyFromVector(rel2->cols);
-	sql_query_grammar::ExprSchemaTableColumn *estc1 = bexpr->mutable_lhs()->mutable_comp_expr()->mutable_expr_stc(),
-											 *estc2 = bexpr->mutable_rhs()->mutable_comp_expr()->mutable_expr_stc();
+	sql_query_grammar::ComplicatedExpr *cexpr1 = bexpr->mutable_lhs()->mutable_comp_expr(),
+									   *cexpr2 = bexpr->mutable_rhs()->mutable_comp_expr();
+	sql_query_grammar::ExprSchemaTableColumn *estc1 = cexpr1->mutable_expr_stc(),
+											 *estc2 = cexpr2->mutable_expr_stc();
+
 	if (rel1->name != "") {
 		estc1->mutable_table()->set_table(rel1->name);
 	}
@@ -131,6 +136,8 @@ int StatementGenerator::AddJoinClause(ClientContext &cc, RandomGenerator &rg, sq
 	}
 	estc1->mutable_col()->mutable_col()->set_column(col1.name);
 	estc2->mutable_col()->mutable_col()->set_column(col2.name);
+	AddFieldAccess(cc, rg, cexpr1);
+	AddFieldAccess(cc, rg, cexpr2);
 	return 0;
 }
 
@@ -199,11 +206,13 @@ int StatementGenerator::AddWhereFilter(ClientContext &cc, RandomGenerator &rg, s
 		lexpr = rexpr;
 		rexpr = aux;
 	}
-	sql_query_grammar::ExprSchemaTableColumn *estc = lexpr->mutable_comp_expr()->mutable_expr_stc();
+	sql_query_grammar::ComplicatedExpr *cexpr = lexpr->mutable_comp_expr();
+	sql_query_grammar::ExprSchemaTableColumn *estc = cexpr->mutable_expr_stc();
 	if (rel1.name != "") {
 		estc->mutable_table()->set_table(rel1.name);
 	}
 	estc->mutable_col()->mutable_col()->set_column(col.name);
+	AddFieldAccess(cc, rg, cexpr);
 	GenerateLiteralValue(cc, rg, rexpr);
 	return 0;
 }
@@ -300,11 +309,14 @@ int StatementGenerator::GenerateGroupBy(ClientContext &cc, RandomGenerator &rg, 
 			this->width++;
 			if (!available_cols.empty() && rg.NextSmallNumber() < 10) {
 				const SQLRelationCol &rel_col = available_cols[i];
-				sql_query_grammar::ExprSchemaTableColumn *estc = expr->mutable_comp_expr()->mutable_expr_stc();
+				sql_query_grammar::ComplicatedExpr *cexpr = expr->mutable_comp_expr();
+				sql_query_grammar::ExprSchemaTableColumn *estc = cexpr->mutable_expr_stc();
+
 				if (rel_col.rel_name != "") {
 					estc->mutable_table()->set_table(rel_col.rel_name);
 				}
 				estc->mutable_col()->mutable_col()->set_column(rel_col.name);
+				AddFieldAccess(cc, rg, cexpr);
 				gcols.push_back(rel_col);
 			} else {
 				GenerateExpression(cc, rg, expr);
@@ -354,12 +366,14 @@ int StatementGenerator::GenerateOrderBy(ClientContext &cc, RandomGenerator &rg, 
 		this->width++;
 		if (!available_cols.empty() && next_option < 6) {
 			const SQLRelationCol &src = available_cols[i];
-			sql_query_grammar::ExprSchemaTableColumn *estc = expr->mutable_comp_expr()->mutable_expr_stc();
+			sql_query_grammar::ComplicatedExpr *cexpr = expr->mutable_comp_expr();
+			sql_query_grammar::ExprSchemaTableColumn *estc = cexpr->mutable_expr_stc();
 
 			if (src.rel_name != "") {
 				estc->mutable_table()->set_table(src.rel_name);
 			}
 			estc->mutable_col()->mutable_col()->set_column(src.name);
+			AddFieldAccess(cc, rg, cexpr);
 		} else if (next_option < 9) {
 			sql_query_grammar::LiteralValue *lv = expr->mutable_lit_val();
 
