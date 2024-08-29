@@ -1075,7 +1075,7 @@ CONV_FN(ArrayJoin, aj) {
 CONV_FN(JoinClauseCore, jcc) {
   if (jcc.has_core()) {
     JoinCoreToString(ret, jcc.core());
-  } else if (jcc.has_core()) {
+  } else if (jcc.has_arr()) {
     ArrayJoinToString(ret, jcc.arr());
   }
 }

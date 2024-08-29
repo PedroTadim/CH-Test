@@ -48,7 +48,7 @@ private:
 	std::map<uint32_t, SQLTable> staged_tables, tables;
 
 	std::vector<uint32_t> ids;
-	uint32_t depth = 0, width = 0, max_depth = 3, max_width = 3, max_tables = 10;
+	uint32_t depth = 0, width = 0, max_depth = 4, max_width = 4, max_tables = 10;
 
 	std::map<uint32_t, QueryLevel> levels;
 
