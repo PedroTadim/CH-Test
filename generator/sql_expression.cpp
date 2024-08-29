@@ -31,7 +31,9 @@ int StatementGenerator::GenerateLiteralValue(ClientContext &cc, RandomGenerator 
 	} else if (noption < 601) {
 		std::string ret;
 
+		ret += "'";
 		rg.NextString(ret, 100000);
+		ret += "'";
 		lv->set_no_quote_str(ret);
 	} else if (noption < 701) {
 		lv->set_special_val((sql_query_grammar::SpecialVal) ((rg.NextRandomUInt32() % (uint32_t) sql_query_grammar::SpecialVal_MAX) + 1));
@@ -44,7 +46,7 @@ int StatementGenerator::GenerateLiteralValue(ClientContext &cc, RandomGenerator 
 
 		ret += "'";
 		StrBuildJSON(rg, dopt(rg.gen), wopt(rg.gen), ret);
-		ret += "'";
+		ret += "'::JSON";
 		lv->set_no_quote_str(ret);
 	} else {
 		lv->set_special_val(sql_query_grammar::SpecialVal::VAL_NULL);
@@ -251,9 +253,9 @@ int StatementGenerator::GenerateExpression(ClientContext &cc, RandomGenerator &r
 		AddFieldAccess(cc, rg, cexpr);
 	}
 
-	if (this->depth >= this->depth || noption < 201) {
+	if (noption < 151) {
 		this->GenerateLiteralValue(cc, rg, expr);
-	} else if (noption < 401) {
+	} else if (this->depth >= this->depth || noption < 401) {
 		this->GenerateColRef(cc, rg, expr);
 	} else if (noption < 501) {
 		this->depth++;

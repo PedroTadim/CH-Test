@@ -48,7 +48,7 @@ private:
 	std::map<uint32_t, SQLTable> staged_tables, tables;
 
 	std::vector<uint32_t> ids;
-	uint32_t depth = 0, width = 0, max_depth = 10, max_width = 10, max_tables = 10;
+	uint32_t depth = 0, width = 0, max_depth = 3, max_width = 3, max_tables = 10;
 
 	std::map<uint32_t, QueryLevel> levels;
 
@@ -81,8 +81,8 @@ private:
 	int GeneratePredicate(ClientContext &cc, RandomGenerator &rg, sql_query_grammar::Expr *expr);
 	int GenerateExpression(ClientContext &cc, RandomGenerator &rg, sql_query_grammar::Expr *expr);
 
-	int GenerateOrderBy(ClientContext &cc, RandomGenerator &rg, sql_query_grammar::OrderByStatement *ob);
-	int GenerateLimit(ClientContext &cc, RandomGenerator &rg, const bool has_order_by, sql_query_grammar::LimitStatement *ls);
+	int GenerateOrderBy(ClientContext &cc, RandomGenerator &rg, const uint32_t ncols, sql_query_grammar::OrderByStatement *ob);
+	int GenerateLimit(ClientContext &cc, RandomGenerator &rg, const bool has_order_by, const uint32_t ncols, sql_query_grammar::LimitStatement *ls);
 	int GenerateGroupBy(ClientContext &cc, RandomGenerator &rg, sql_query_grammar::GroupByStatement *gb);
 	int AddWhereFilter(ClientContext &cc, RandomGenerator &rg, sql_query_grammar::BinaryExpr *bexpr);
 	int GenerateWherePredicate(ClientContext &cc, RandomGenerator &rg, sql_query_grammar::Expr *expr);

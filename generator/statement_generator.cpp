@@ -197,8 +197,9 @@ int StatementGenerator::GenerateNextQuery(ClientContext &cc, RandomGenerator &rg
 				   check_table = 2 * (int)!tables.empty(),
 				   desc_table = 2 * (int)!tables.empty(),
 				   exchange_tables = 1 * (int)(tables.size() > 1),
+				   select_query = 200,
 				   prob_space = create_table + drop_table + insert + light_delete + truncate + optimize_table +
-				   				check_table + desc_table + exchange_tables;
+				   				check_table + desc_table + exchange_tables + select_query;
 
 	assert(this->ids.empty());
 	if (prob_space) {
