@@ -480,7 +480,7 @@ CONV_FN(LiteralValue, lit_val) {
           ret += std::to_string(std::numeric_limits<int64_t>::max());
           break;
         case SpecialVal::VAL_NULL_CHAR:
-          ret += "'\0'";
+          ret += "'\\0'";
           break;
         case SpecialVal::VAL_DEFAULT:
           ret += "DEFAULT";
