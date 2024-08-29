@@ -124,7 +124,7 @@ int StatementGenerator::GeneratePredicate(ClientContext &cc, RandomGenerator &rg
 				this->GenerateExpression(cc, rg, unexp->mutable_expr());
 			}
 			this->depth--;
-		} else if (noption < 301) {
+		} else if (this->max_width > this->width + 1 && noption < 301) {
 			sql_query_grammar::ComplicatedExpr *cexpr = expr->mutable_comp_expr();
 			sql_query_grammar::BinaryExpr *bexpr = cexpr->mutable_binary_expr();
 
@@ -143,7 +143,7 @@ int StatementGenerator::GeneratePredicate(ClientContext &cc, RandomGenerator &rg
 			}
 			this->width--;
 			this->depth--;
-		} else if (noption < 401) {
+		} else if (this->max_width > this->width + 2 && noption < 401) {
 			sql_query_grammar::ComplicatedExpr *cexpr = expr->mutable_comp_expr();
 			sql_query_grammar::ExprBetween *bexpr = cexpr->mutable_expr_between();
 
@@ -183,7 +183,7 @@ int StatementGenerator::GeneratePredicate(ClientContext &cc, RandomGenerator &rg
 				}
 			}
 			this->depth--;
-		} else if (noption < 601) {
+		} else if (this->max_width > this->width + 1 && noption < 601) {
 			sql_query_grammar::ComplicatedExpr *cexpr = expr->mutable_comp_expr();
 			sql_query_grammar::ExprAny *eany = cexpr->mutable_expr_any();
 
@@ -211,7 +211,7 @@ int StatementGenerator::GeneratePredicate(ClientContext &cc, RandomGenerator &rg
 			this->depth++;
 			this->GenerateSubquery(cc, rg, exists->mutable_select());
 			this->depth--;
-		} else if (noption < 901) {
+		} else if (this->max_width > this->width + 1 && noption < 901) {
 			sql_query_grammar::ComplicatedExpr *cexpr = expr->mutable_comp_expr();
 			sql_query_grammar::ExprLike *elike = cexpr->mutable_expr_like();
 
@@ -234,7 +234,7 @@ int StatementGenerator::GeneratePredicate(ClientContext &cc, RandomGenerator &rg
 }
 
 int StatementGenerator::GenerateExpression(ClientContext &cc, RandomGenerator &rg, sql_query_grammar::Expr *expr) {
-	const int noption = rg.NextLargeNumber(), noption2 = rg.NextLargeNumber();
+	const int noption = rg.NextLargeNumber();
 
 	if (rg.NextSmallNumber() < 3) {
 		sql_query_grammar::ComplicatedExpr *cexpr = expr->mutable_comp_expr();
@@ -272,7 +272,7 @@ int StatementGenerator::GenerateExpression(ClientContext &cc, RandomGenerator &r
 		this->depth--;
 		delete tp;
 		AddFieldAccess(cc, rg, cexpr);
-	} else if (this->max_width > this->width + 3 && noption < 551) {
+	} else if (this->max_width > this->width + 2 && noption < 551) {
 		sql_query_grammar::ComplicatedExpr *cexpr = expr->mutable_comp_expr();
 		sql_query_grammar::CondExpr *conexpr = cexpr->mutable_expr_cond();
 
@@ -285,7 +285,7 @@ int StatementGenerator::GenerateExpression(ClientContext &cc, RandomGenerator &r
 		this->width-=2;
 		this->depth--;
 		AddFieldAccess(cc, rg, cexpr);
-	} else if (this->max_width > this->width + 2 && noption < 601) {
+	} else if (this->max_width > this->width + 1 && noption < 601) {
 		sql_query_grammar::ComplicatedExpr *cexpr = expr->mutable_comp_expr();
 		sql_query_grammar::ExprCase *caseexp = cexpr->mutable_expr_case();
 		const uint32_t nwhen = std::min(this->max_width - this->width, rg.NextSmallNumber() % 4);
@@ -313,7 +313,7 @@ int StatementGenerator::GenerateExpression(ClientContext &cc, RandomGenerator &r
 		this->GenerateSubquery(cc, rg, cexpr->mutable_subquery());
 		this->depth--;
 		AddFieldAccess(cc, rg, cexpr);
-	} else if (this->max_width > this->width + 2 && noption < 701) {
+	} else if (this->max_width > this->width + 1 && noption < 701) {
 		sql_query_grammar::ComplicatedExpr *cexpr = expr->mutable_comp_expr();
 		sql_query_grammar::BinaryExpr *bexpr = cexpr->mutable_binary_expr();
 

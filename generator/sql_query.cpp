@@ -380,6 +380,7 @@ int StatementGenerator::GenerateLimit(ClientContext &cc, RandomGenerator &rg, co
 	uint32_t nlimit = 0;
 	const int next_option = rg.NextSmallNumber();
 
+	this->depth++;
 	if (next_option < 3) {
 		nlimit = 0;
 	} else if (next_option < 5) {
@@ -422,6 +423,7 @@ int StatementGenerator::GenerateLimit(ClientContext &cc, RandomGenerator &rg, co
 			GenerateExpression(cc, rg, expr);
 		}
 	}
+	this->depth--;
 	return 0;
 }
 
@@ -429,7 +431,7 @@ int StatementGenerator::GenerateSelect(ClientContext &cc, RandomGenerator &rg, c
 	int res = 0;
 
 	this->levels[this->current_level] = QueryLevel(this->current_level);
-	if (this->depth < this->max_depth && this->width < this->max_width && rg.NextSmallNumber() < 3) {
+	if (this->depth < this->max_depth && this->max_width > this->width + 1 && rg.NextSmallNumber() < 3) {
 		sql_query_grammar::SetQuery *setq = sel->mutable_set_query();
 
 		setq->set_set_op((sql_query_grammar::SetQuery_SetOp) ((rg.NextRandomUInt32() % (uint32_t) sql_query_grammar::SetQuery::SetOp_MAX) + 1));
@@ -464,6 +466,7 @@ int StatementGenerator::GenerateSelect(ClientContext &cc, RandomGenerator &rg, c
 			this->levels[this->current_level].global_aggregate = rg.NextSmallNumber() < 3;
 		}
 
+		this->depth++;
 		for (uint32_t i = 0 ; i < ncols; i++) {
 			sql_query_grammar::ExprColAlias *eca = ssc->add_result_columns()->mutable_eca();
 
@@ -478,6 +481,7 @@ int StatementGenerator::GenerateSelect(ClientContext &cc, RandomGenerator &rg, c
 			}
 			this->width++;
 		}
+		this->depth--;
 		this->width -= ncols;
 
 		if (this->width < this->max_width && rg.NextSmallNumber() < 4) {

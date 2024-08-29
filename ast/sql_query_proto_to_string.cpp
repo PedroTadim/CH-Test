@@ -298,12 +298,12 @@ AddJsonElement(std::string &ret, std::mt19937 &gen) {
       case 9:
       case 10: { //string
         std::uniform_int_distribution<int> slen(0, 200);
-        std::uniform_int_distribution<int> chars(32, 128);
+        std::uniform_int_distribution<uint8_t> chars(32, 128);
         const int nlen = slen(gen);
 
         ret += '"';
         for (int i = 0 ; i < nlen ; i++) {
-          const int nchar = chars(gen);
+          const uint8_t nchar = chars(gen);
 
           switch (nchar) {
             case 128:

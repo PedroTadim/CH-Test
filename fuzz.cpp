@@ -15,7 +15,7 @@ RunQuery(std::string &ret, chfuzz::StatementGenerator &gen, chfuzz::ClientContex
 	try {
 		std::cout << "Running query: " << ret << std::endl;
 
-		cli.client.Execute(ret);
+		cli.LogQuery(ret);
 		success = true;
 	} catch (const std::exception & e) {
 		std::cerr << "Got exception " << e.what() << std::endl;
@@ -36,45 +36,45 @@ int main() {
 	chfuzz::StatementGenerator gen;
 	std::string ret;
 
-	cli.client.Execute("DROP DATABASE IF EXISTS s0;");
-	cli.client.Execute("CREATE DATABASE s0;");
-	cli.client.Execute("USE s0;");
+	cli.LogQuery("DROP DATABASE IF EXISTS s0;");
+	cli.LogQuery("CREATE DATABASE s0;");
+	cli.LogQuery("USE s0;");
 
-	cli.client.Execute("SET allow_experimental_json_type = 1;");
-	cli.client.Execute("SET allow_experimental_inverted_index = 1;");
-	cli.client.Execute("SET allow_experimental_full_text_index = 1;");
-	cli.client.Execute("SET allow_experimental_codecs = 1;");
-	cli.client.Execute("SET allow_experimental_live_view = 1;");
-	cli.client.Execute("SET allow_experimental_window_view = 1;");
-	cli.client.Execute("SET allow_experimental_funnel_functions = 1;");
-	cli.client.Execute("SET allow_experimental_nlp_functions = 1;");
-	cli.client.Execute("SET allow_experimental_hash_functions = 1;");
-	cli.client.Execute("SET allow_experimental_object_type = 1;");
-	cli.client.Execute("SET allow_experimental_variant_type = 1;");
-	cli.client.Execute("SET allow_experimental_dynamic_type = 1;");
-	cli.client.Execute("SET allow_experimental_annoy_index = 1;");
-	cli.client.Execute("SET allow_experimental_usearch_index = 1;");
-	cli.client.Execute("SET allow_experimental_bigint_types = 1;");
-	cli.client.Execute("SET allow_experimental_window_functions = 1;");
-	cli.client.Execute("SET allow_experimental_geo_types = 1;");
-	cli.client.Execute("SET allow_experimental_map_type = 1;");
-	cli.client.Execute("SET allow_deprecated_error_prone_window_functions = 1;");
-	cli.client.Execute("SET allow_suspicious_low_cardinality_types = 1;");
-	cli.client.Execute("SET allow_suspicious_fixed_string_types = 1;");
-	cli.client.Execute("SET allow_suspicious_indices = 1;");
-	cli.client.Execute("SET allow_suspicious_codecs = 1;");
-	cli.client.Execute("SET allow_hyperscan = 1;");
-	cli.client.Execute("SET allow_simdjson = 1;");
-	cli.client.Execute("SET allow_deprecated_syntax_for_merge_tree = 1;");
-	cli.client.Execute("SET allow_suspicious_primary_key = 1;");
-	cli.client.Execute("SET allow_suspicious_ttl_expressions = 1;");
-	cli.client.Execute("SET allow_suspicious_variant_types = 1;");
-	cli.client.Execute("SET enable_deflate_qpl_codec = 1;");
-	cli.client.Execute("SET enable_zstd_qat_codec = 1;");
-	cli.client.Execute("SET allow_create_index_without_type = 1;");
-	cli.client.Execute("SET allow_experimental_s3queue = 1;");
-	cli.client.Execute("SET allow_experimental_analyzer = 1;");
-	cli.client.Execute("SET type_json_skip_duplicated_paths = 1;");
+	cli.LogQuery("SET allow_experimental_json_type = 1;");
+	cli.LogQuery("SET allow_experimental_inverted_index = 1;");
+	cli.LogQuery("SET allow_experimental_full_text_index = 1;");
+	cli.LogQuery("SET allow_experimental_codecs = 1;");
+	cli.LogQuery("SET allow_experimental_live_view = 1;");
+	cli.LogQuery("SET allow_experimental_window_view = 1;");
+	cli.LogQuery("SET allow_experimental_funnel_functions = 1;");
+	cli.LogQuery("SET allow_experimental_nlp_functions = 1;");
+	cli.LogQuery("SET allow_experimental_hash_functions = 1;");
+	cli.LogQuery("SET allow_experimental_object_type = 1;");
+	cli.LogQuery("SET allow_experimental_variant_type = 1;");
+	cli.LogQuery("SET allow_experimental_dynamic_type = 1;");
+	cli.LogQuery("SET allow_experimental_annoy_index = 1;");
+	cli.LogQuery("SET allow_experimental_usearch_index = 1;");
+	cli.LogQuery("SET allow_experimental_bigint_types = 1;");
+	cli.LogQuery("SET allow_experimental_window_functions = 1;");
+	cli.LogQuery("SET allow_experimental_geo_types = 1;");
+	cli.LogQuery("SET allow_experimental_map_type = 1;");
+	cli.LogQuery("SET allow_deprecated_error_prone_window_functions = 1;");
+	cli.LogQuery("SET allow_suspicious_low_cardinality_types = 1;");
+	cli.LogQuery("SET allow_suspicious_fixed_string_types = 1;");
+	cli.LogQuery("SET allow_suspicious_indices = 1;");
+	cli.LogQuery("SET allow_suspicious_codecs = 1;");
+	cli.LogQuery("SET allow_hyperscan = 1;");
+	cli.LogQuery("SET allow_simdjson = 1;");
+	cli.LogQuery("SET allow_deprecated_syntax_for_merge_tree = 1;");
+	cli.LogQuery("SET allow_suspicious_primary_key = 1;");
+	cli.LogQuery("SET allow_suspicious_ttl_expressions = 1;");
+	cli.LogQuery("SET allow_suspicious_variant_types = 1;");
+	cli.LogQuery("SET enable_deflate_qpl_codec = 1;");
+	cli.LogQuery("SET enable_zstd_qat_codec = 1;");
+	cli.LogQuery("SET allow_create_index_without_type = 1;");
+	cli.LogQuery("SET allow_experimental_s3queue = 1;");
+	cli.LogQuery("SET allow_experimental_analyzer = 1;");
+	cli.LogQuery("SET type_json_skip_duplicated_paths = 1;");
 
 	ret.reserve(4096);
 	while (true) {
