@@ -82,12 +82,13 @@ int StatementGenerator::GenerateFromElement(ClientContext &cc, RandomGenerator &
 	} else if (!this->tables.empty()) {
 		sql_query_grammar::JoinedTable *jt = tos->mutable_jt();
 		const SQLTable &t = rg.PickValueRandomlyFromMap(this->tables);
-		const std::string name = "t" + std::to_string(t.tname);
+		const std::string tname = "t" + std::to_string(t.tname);
 
-		jt->mutable_est()->mutable_table_name()->set_table(name);
+		jt->mutable_est()->mutable_table_name()->set_table(tname);
 		for (const auto &entry : t.cols) {
 			rel.cols.push_back(SQLRelationCol(name, "c" + std::to_string(entry.first), entry.second.tp));
 		}
+		jt->mutable_table_alias()->set_table(name);
 	} else {
 		//fallback case
 		sql_query_grammar::JoinedDerivedQuery *jdq = tos->mutable_jdq();
@@ -98,6 +99,7 @@ int StatementGenerator::GenerateFromElement(ClientContext &cc, RandomGenerator &
 		GenerateLiteralValue(cc, rg, eca->mutable_expr());
 		eca->mutable_col_alias()->set_column("c0");
 		rel.cols.push_back(SQLRelationCol(name, "c0", nullptr));
+		jdq->mutable_table_alias()->set_table(name);
 	}
 	this->levels[this->current_level].rels.push_back(std::move(rel));
 	return 0;
@@ -259,7 +261,7 @@ int StatementGenerator::GenerateFromStatement(ClientContext &cc, RandomGenerator
 						core->set_join_const((sql_query_grammar::JoinCore_JoinConst) ((rg.NextRandomUInt32() % (uint32_t) sql_query_grammar::JoinCore_JoinConst::JoinCore_JoinConst_ANTI) + 1));
 						break;
 					case sql_query_grammar::JoinCore_JoinType::JoinCore_JoinType_FULL:
-						core->set_join_const((sql_query_grammar::JoinCore_JoinConst) ((rg.NextRandomUInt32() % (uint32_t) sql_query_grammar::JoinCore_JoinConst::JoinCore_JoinConst_ALL) + 1));
+						core->set_join_const(sql_query_grammar::JoinCore_JoinConst::JoinCore_JoinConst_ALL);
 						break;
 				}
 			}
@@ -373,7 +375,8 @@ int StatementGenerator::GenerateOrderBy(ClientContext &cc, RandomGenerator &rg, 
 	return 0;
 }
 
-int StatementGenerator::GenerateLimit(ClientContext &cc, RandomGenerator &rg, const bool has_order_by, const uint32_t ncols, sql_query_grammar::LimitStatement *ls) {
+int StatementGenerator::GenerateLimit(ClientContext &cc, RandomGenerator &rg, const bool has_order_by, const bool has_distinct,
+									  const uint32_t ncols, sql_query_grammar::LimitStatement *ls) {
 	uint32_t nlimit = 0;
 	const int next_option = rg.NextSmallNumber();
 
@@ -406,7 +409,7 @@ int StatementGenerator::GenerateLimit(ClientContext &cc, RandomGenerator &rg, co
 		}
 		ls->set_offset(noffset);
 	}
-	ls->set_with_ties(has_order_by && rg.NextSmallNumber() < 7);
+	ls->set_with_ties(has_order_by && !has_distinct && rg.NextSmallNumber() < 7);
 	if (rg.NextSmallNumber() < 4) {
 		const int next_option = rg.NextSmallNumber();
 		sql_query_grammar::Expr *expr = ls->mutable_limit_by();
@@ -481,7 +484,7 @@ int StatementGenerator::GenerateSelect(ClientContext &cc, RandomGenerator &rg, c
 			GenerateOrderBy(cc, rg, ncols, ssc->mutable_orderby());
 		}
 		if (rg.NextSmallNumber() < 3) {
-			GenerateLimit(cc, rg, ssc->has_orderby(), ncols, ssc->mutable_limit());
+			GenerateLimit(cc, rg, ssc->has_orderby(), ssc->s_or_d() == sql_query_grammar::AllOrDistinct::DISTINCT, ncols, ssc->mutable_limit());
 		}
 	}
 	this->levels.erase(this->current_level);

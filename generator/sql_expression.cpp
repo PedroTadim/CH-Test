@@ -257,11 +257,11 @@ int StatementGenerator::GenerateExpression(ClientContext &cc, RandomGenerator &r
 		this->GenerateLiteralValue(cc, rg, expr);
 	} else if (this->depth >= this->depth || noption < 401) {
 		this->GenerateColRef(cc, rg, expr);
-	} else if (noption < 501) {
+	} else if (noption < 451) {
 		this->depth++;
 		this->GeneratePredicate(cc, rg, expr);
 		this->depth--;
-	} else if (noption < 551) {
+	} else if (noption < 501) {
 		uint32_t col_counter = 0;
 		sql_query_grammar::ComplicatedExpr *cexpr = expr->mutable_comp_expr();
 		sql_query_grammar::CastExpr *casexpr = cexpr->mutable_cast_expr();
@@ -272,7 +272,7 @@ int StatementGenerator::GenerateExpression(ClientContext &cc, RandomGenerator &r
 		this->depth--;
 		delete tp;
 		AddFieldAccess(cc, rg, cexpr);
-	} else if (noption < 601) {
+	} else if (this->max_width > this->width + 3 && noption < 551) {
 		sql_query_grammar::ComplicatedExpr *cexpr = expr->mutable_comp_expr();
 		sql_query_grammar::CondExpr *conexpr = cexpr->mutable_expr_cond();
 
@@ -285,13 +285,35 @@ int StatementGenerator::GenerateExpression(ClientContext &cc, RandomGenerator &r
 		this->width-=2;
 		this->depth--;
 		AddFieldAccess(cc, rg, cexpr);
-	} else if (noption < 701) {
+	} else if (this->max_width > this->width + 2 && noption < 601) {
+		sql_query_grammar::ComplicatedExpr *cexpr = expr->mutable_comp_expr();
+		sql_query_grammar::ExprCase *caseexp = cexpr->mutable_expr_case();
+		const uint32_t nwhen = std::min(this->max_width - this->width, rg.NextSmallNumber() % 4);
+
+		this->depth++;
+		if (rg.NextSmallNumber() < 5) {
+			this->GenerateExpression(cc, rg, caseexp->mutable_expr());
+		}
+		for (uint32_t i = 0 ; i < nwhen; i++) {
+			sql_query_grammar::ExprWhenThen *wt = i == 0 ? caseexp->mutable_when_then() : caseexp->add_extra_when_thens();
+
+			this->GenerateExpression(cc, rg, wt->mutable_when_expr());
+			this->GenerateExpression(cc, rg, wt->mutable_then_expr());
+			this->width++;
+		}
+		this->width -= nwhen;
+		if (rg.NextSmallNumber() < 5) {
+			this->GenerateExpression(cc, rg, caseexp->mutable_else_expr());
+		}
+		this->depth--;
+		AddFieldAccess(cc, rg, cexpr);
+	} else if (noption < 651) {
 		sql_query_grammar::ComplicatedExpr *cexpr = expr->mutable_comp_expr();
 		this->depth++;
 		this->GenerateSubquery(cc, rg, cexpr->mutable_subquery());
 		this->depth--;
 		AddFieldAccess(cc, rg, cexpr);
-	} else if (noption < 751) {
+	} else if (this->max_width > this->width + 2 && noption < 701) {
 		sql_query_grammar::ComplicatedExpr *cexpr = expr->mutable_comp_expr();
 		sql_query_grammar::BinaryExpr *bexpr = cexpr->mutable_binary_expr();
 
@@ -303,7 +325,7 @@ int StatementGenerator::GenerateExpression(ClientContext &cc, RandomGenerator &r
 		this->width--;
 		this->depth--;
 		AddFieldAccess(cc, rg, cexpr);
-	} else if (this->width < this->max_width && noption < 801) {
+	} else if (this->width < this->max_width && noption < 751) {
 		sql_query_grammar::ComplicatedExpr *cexpr = expr->mutable_comp_expr();
 		sql_query_grammar::ArraySequence *arr = cexpr->mutable_array();
 		const uint32_t nvalues = std::min(this->max_width - this->width, rg.NextSmallNumber() % 8);
@@ -316,7 +338,7 @@ int StatementGenerator::GenerateExpression(ClientContext &cc, RandomGenerator &r
 		this->depth--;
 		this->width -= nvalues;
 		AddFieldAccess(cc, rg, cexpr);
-	} else if (this->width < this->max_width && noption < 851) {
+	} else if (this->width < this->max_width && noption < 801) {
 		sql_query_grammar::ComplicatedExpr *cexpr = expr->mutable_comp_expr();
 		sql_query_grammar::TupleSequence *tupl = cexpr->mutable_tuple();
 		const uint32_t nvalues = std::min(this->max_width - this->width, rg.NextSmallNumber() % 8),

@@ -82,7 +82,7 @@ private:
 	int GenerateExpression(ClientContext &cc, RandomGenerator &rg, sql_query_grammar::Expr *expr);
 
 	int GenerateOrderBy(ClientContext &cc, RandomGenerator &rg, const uint32_t ncols, sql_query_grammar::OrderByStatement *ob);
-	int GenerateLimit(ClientContext &cc, RandomGenerator &rg, const bool has_order_by, const uint32_t ncols, sql_query_grammar::LimitStatement *ls);
+	int GenerateLimit(ClientContext &cc, RandomGenerator &rg, const bool has_order_by, const bool has_distinct, const uint32_t ncols, sql_query_grammar::LimitStatement *ls);
 	int GenerateGroupBy(ClientContext &cc, RandomGenerator &rg, sql_query_grammar::GroupByStatement *gb);
 	int AddWhereFilter(ClientContext &cc, RandomGenerator &rg, sql_query_grammar::BinaryExpr *bexpr);
 	int GenerateWherePredicate(ClientContext &cc, RandomGenerator &rg, sql_query_grammar::Expr *expr);

@@ -1049,7 +1049,7 @@ CONV_FN(JoinCore, jcc) {
   }
   if (jcc.join_op() != sql_query_grammar::JoinCore_JoinType::JoinCore_JoinType_INNER ||
       !jcc.has_join_const() ||
-      jcc.join_const() != sql_query_grammar::JoinCore_JoinConst::JoinCore_JoinConst_ASOF) {
+      jcc.join_const() < sql_query_grammar::JoinCore_JoinConst::JoinCore_JoinConst_SEMI) {
     ret += " ";
     ret += JoinCore_JoinType_Name(jcc.join_op());
   }
@@ -1199,7 +1199,7 @@ CONV_FN(LimitStatement, ls) {
   ret += "LIMIT ";
   ret += std::to_string(ls.limit());
   if (ls.has_offset()) {
-    ret += " OFFSET ";
+    ret += ", ";
     ret += std::to_string(ls.offset());
   }
   if (ls.with_ties()) {
