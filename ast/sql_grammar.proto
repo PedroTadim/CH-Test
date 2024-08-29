@@ -122,7 +122,6 @@ enum BinaryOperator {
   BINOP_PERCENT = 14;
   BINOP_PLUS = 15;
   BINOP_MINUS = 16;
-  BINOP_PIPE = 17;
 }
 
 message BinaryExpr {

@@ -327,7 +327,7 @@ int StatementGenerator::GenerateExpression(ClientContext &cc, RandomGenerator &r
 		sql_query_grammar::BinaryExpr *bexpr = cexpr->mutable_binary_expr();
 
 		this->depth++;
-		bexpr->set_op((sql_query_grammar::BinaryOperator) ((rg.NextRandomUInt32() % 7) + 11));
+		bexpr->set_op((sql_query_grammar::BinaryOperator) ((rg.NextRandomUInt32() % 7) + 10));
 		this->GenerateExpression(cc, rg, bexpr->mutable_lhs());
 		this->width++;
 		this->GenerateExpression(cc, rg, bexpr->mutable_rhs());

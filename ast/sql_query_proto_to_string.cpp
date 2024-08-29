@@ -560,8 +560,6 @@ CONV_FN(BinaryOperator, bop) {
     case BINOP_MINUS:
       ret += " - ";
       break;
-    default:
-      ret += " AND ";
   }
 }
 
