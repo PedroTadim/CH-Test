@@ -886,7 +886,7 @@ CONV_FN(SQLFuncCall, e) {
       if (i != 0) {
         ret += ",";
       }
-      ExprToString(ret, e.args(i));
+      ExprToString(ret, e.params(i));
     }
     ret += ')';
   }

@@ -43,7 +43,7 @@ int StatementGenerator::GenerateFromElement(ClientContext &cc, RandomGenerator &
 	name += std::to_string(this->current_level);
 	SQLRelation rel(name);
 
-	if (this->width < this->max_width && (this->tables.empty() || rg.NextSmallNumber() < 5)) {
+	if (this->depth < this->max_depth && this->width < this->max_width && (this->tables.empty() || rg.NextSmallNumber() < 5)) {
 		std::vector<SQLType*> cols;
 		sql_query_grammar::JoinedDerivedQuery *jdq = tos->mutable_jdq();
 		sql_query_grammar::Select *sel = jdq->mutable_select();
@@ -411,7 +411,7 @@ int StatementGenerator::GenerateLimit(ClientContext &cc, RandomGenerator &rg, co
 		ls->set_offset(noffset);
 	}
 	ls->set_with_ties(has_order_by && !has_distinct && rg.NextSmallNumber() < 7);
-	if (rg.NextSmallNumber() < 4) {
+	if (this->depth < this->max_depth && rg.NextSmallNumber() < 4) {
 		const int next_option = rg.NextSmallNumber();
 		sql_query_grammar::Expr *expr = ls->mutable_limit_by();
 
@@ -440,9 +440,11 @@ int StatementGenerator::GenerateSelect(ClientContext &cc, RandomGenerator &rg, c
 		this->depth++;
 		this->current_level++;
 		res = std::max<int>(res, GenerateSelect(cc, rg, false, ncols, setq->mutable_sel1()));
+		this->width++;
 		res = std::max<int>(res, GenerateSelect(cc, rg, false, ncols, setq->mutable_sel2()));
 		this->current_level--;
 		this->depth--;
+		this->width--;
 	} else {
 		sql_query_grammar::SelectStatementCore *ssc = sel->mutable_select_core();
 
@@ -453,14 +455,14 @@ int StatementGenerator::GenerateSelect(ClientContext &cc, RandomGenerator &rg, c
 			res = std::max<int>(res, GenerateFromStatement(cc, rg, ssc->mutable_from()));
 		}
 
-		if (rg.NextSmallNumber() < 5) {
+		if (this->depth < this->max_depth && rg.NextSmallNumber() < 5) {
 			GenerateWherePredicate(cc, rg, ssc->mutable_pre_where()->mutable_expr()->mutable_expr());
 		}
-		if (rg.NextSmallNumber() < 5) {
+		if (this->depth < this->max_depth && rg.NextSmallNumber() < 5) {
 			GenerateWherePredicate(cc, rg, ssc->mutable_where()->mutable_expr()->mutable_expr());
 		}
 
-		if (this->width < this->max_width && rg.NextSmallNumber() < 4) {
+		if (this->depth < this->max_depth && this->width < this->max_width && rg.NextSmallNumber() < 4) {
 			GenerateGroupBy(cc, rg, ssc->mutable_groupby());
 		} else {
 			this->levels[this->current_level].global_aggregate = rg.NextSmallNumber() < 3;
@@ -484,7 +486,7 @@ int StatementGenerator::GenerateSelect(ClientContext &cc, RandomGenerator &rg, c
 		this->depth--;
 		this->width -= ncols;
 
-		if (this->width < this->max_width && rg.NextSmallNumber() < 4) {
+		if (this->depth < this->max_depth && this->width < this->max_width && rg.NextSmallNumber() < 4) {
 			GenerateOrderBy(cc, rg, ncols, ssc->mutable_orderby());
 		}
 		if (rg.NextSmallNumber() < 3) {

@@ -244,17 +244,19 @@ SQLType* StatementGenerator::RandomNextType(RandomGenerator &rg, const bool allo
 	} else if (noption < 71 || this->depth == this->max_depth) {
 		//non nullable
 		return BottomType(rg, allow_dynamic_types, tp ? tp->mutable_non_nullable() : nullptr);
-	} else if (noption < 81) {
+	} else if (noption < 81 || this->max_width <= this->width + 1) {
 		//array
 		return GenerateArraytype(rg, true, allow_dynamic_types, col_counter, tp ? tp->mutable_array() : nullptr);
-	} else if (noption < 91 || this->width <= (this->max_width - 1)) {
+	} else if (noption < 91) {
 		//map
 		sql_query_grammar::MapType *mt = tp ? tp->mutable_map() : nullptr;
 
 		this->depth++;
 		SQLType* k = this->RandomNextType(rg, false, allow_dynamic_types, col_counter, mt ? mt->mutable_key() : nullptr);
+		this->width++;
 		SQLType* v = this->RandomNextType(rg, true, allow_dynamic_types, col_counter, mt ? mt->mutable_value() : nullptr);
 		this->depth--;
+		this->width--;
 		return new MapType(k, v);
 	} else {
 		//tuple

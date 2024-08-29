@@ -255,7 +255,7 @@ int StatementGenerator::GenerateExpression(ClientContext &cc, RandomGenerator &r
 
 	if (noption < 151) {
 		this->GenerateLiteralValue(cc, rg, expr);
-	} else if (this->depth >= this->depth || noption < 401) {
+	} else if (this->depth >= this->max_depth || noption < 401) {
 		this->GenerateColRef(cc, rg, expr);
 	} else if (noption < 451) {
 		this->depth++;
