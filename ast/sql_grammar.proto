@@ -59,6 +59,7 @@ message LiteralValue {
     int64 json_value = 7;
     int64 json_string = 8;
     SpecialVal special_val = 9;
+    string no_quote_str = 10;
   }
 }
 
@@ -196,6 +197,7 @@ message ExprLike {
   required bool not = 1;
   enum PossibleKeywords {
     LIKE = 1;
+    ILIKE = 2;
   }
   required PossibleKeywords keyword = 2;
   required Expr expr2 = 3;
@@ -217,7 +219,10 @@ message TupleSequence {
 
 message SQLFuncCall {
   required SQLFunc func = 1;
-  repeated Expr args = 2;
+  optional bool distinct = 2;
+  repeated Expr params = 3;
+  repeated Expr args = 4;
+  optional bool respect_nulls = 5;
 }
 
 // Separate this out to inflate the probability of having a literal value
@@ -241,8 +246,7 @@ message ComplicatedExpr {
     ArraySequence array = 16;
     TupleSequence tuple = 17;
   }
-  required LiteralValue lit_val = 18;  // used if oneof is empty.
-  optional FieldAccess field = 19;
+  optional FieldAccess field = 18;
 }
 
 message Expr {

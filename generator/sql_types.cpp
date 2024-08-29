@@ -228,6 +228,12 @@ SQLType* StatementGenerator::GenerateArraytype(RandomGenerator &rg, const bool a
 	return new ArrayType(k);
 }
 
+SQLType* StatementGenerator::GenerateArraytype(RandomGenerator &rg, const bool allow_nullable, const bool allow_dynamic_types) {
+	uint32_t col_counter = 0;
+
+	return GenerateArraytype(rg, allow_nullable, allow_dynamic_types, col_counter, nullptr);
+}
+
 SQLType* StatementGenerator::RandomNextType(RandomGenerator &rg, const bool allow_nullable, const bool allow_dynamic_types,
 											uint32_t &col_counter, sql_query_grammar::TopTypeName *tp) {
 	const uint32_t noption = rg.NextMediumNumber();
@@ -276,6 +282,36 @@ SQLType* StatementGenerator::RandomNextType(RandomGenerator &rg, const bool allo
 		//variant
 	}*/
 	return nullptr;
+}
+
+SQLType* StatementGenerator::RandomNextType(RandomGenerator &rg, const bool allow_nullable, const bool allow_dynamic_types) {
+	uint32_t col_counter = 0;
+
+	return RandomNextType(rg, allow_nullable, allow_dynamic_types, col_counter, nullptr);
+}
+
+void StatementGenerator::AppendDecimal(RandomGenerator &rg, std::string &ret, const uint32_t left, const uint32_t right) {
+	ret += rg.NextBool() ? "-" : "";
+	if (left > 0) {
+		std::uniform_int_distribution<uint32_t> next_dist(1, left);
+		const uint32_t nlen = next_dist(rg.gen);
+
+		ret += std::max<char>(rg.NextDigit(), '1');
+		for (uint32_t j = 1; j < nlen; j++) {
+			ret += rg.NextDigit();
+		}
+	} else {
+		ret += "0";
+	}
+	if (right > 0) {
+		std::uniform_int_distribution<uint32_t> next_dist(1, right);
+		const uint32_t nlen = next_dist(rg.gen);
+
+		ret += ".";
+		for (uint32_t j = 0; j < nlen; j++) {
+			ret += rg.NextDigit();
+		}
+	}
 }
 
 void StatementGenerator::StrAppendBottomValue(RandomGenerator &rg, std::string &ret, SQLType* tp) {
@@ -327,27 +363,7 @@ void StatementGenerator::StrAppendBottomValue(RandomGenerator &rg, std::string &
 	} else if ((detp = dynamic_cast<DecimalType*>(tp))) {
 		const uint32_t right = detp->scale.value_or(0), left = detp->precision.value_or(10) - right;
 
-		ret += rg.NextBool() ? "-" : "";
-		if (left > 0) {
-			std::uniform_int_distribution<uint32_t> next_dist(1, left);
-			const uint32_t nlen = next_dist(rg.gen);
-
-			ret += std::max<char>(rg.NextDigit(), '1');
-			for (uint32_t j = 1; j < nlen; j++) {
-				ret += rg.NextDigit();
-			}
-		} else {
-			ret += "0";
-		}
-		if (right > 0) {
-			std::uniform_int_distribution<uint32_t> next_dist(1, right);
-			const uint32_t nlen = next_dist(rg.gen);
-
-			ret += ".";
-			for (uint32_t j = 0; j < nlen; j++) {
-				ret += rg.NextDigit();
-			}
-		}
+		AppendDecimal(rg, ret, left, right);
 	} else if ((stp = dynamic_cast<StringType*>(tp))) {
 		const uint32_t limit = stp->precision.value_or(100);
 

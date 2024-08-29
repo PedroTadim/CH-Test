@@ -32,7 +32,7 @@ public:
 
 class QueryLevel {
 public:
-	bool global_aggregate;
+	bool global_aggregate = false, inside_aggregate = false;
 	uint32_t level, aliases_counter = 0;
 	std::vector<SQLRelationCol> gcols;
 	std::vector<SQLRelation> rels;
@@ -51,6 +51,8 @@ private:
 	uint32_t depth = 0, width = 0, max_depth = 10, max_width = 10, max_tables = 10;
 
 	std::map<uint32_t, QueryLevel> levels;
+
+	void AppendDecimal(RandomGenerator &rg, std::string &ret, const uint32_t left, const uint32_t right);
 
 	void StrAppendBottomValue(RandomGenerator &rg, std::string &ret, SQLType* tp);
 	void StrAppendMap(RandomGenerator &rg, std::string &ret, MapType *mt);
@@ -72,9 +74,12 @@ private:
 	int GenerateNextDescTable(ClientContext &cc, RandomGenerator &rg, sql_query_grammar::DescTable *sq);
 	int GenerateNextExchangeTables(ClientContext &cc, RandomGenerator &rg, sql_query_grammar::ExchangeTables *sq);
 
-	int GenerateLiteralValue(ClientContext &cc, RandomGenerator &rg, SQLType *tp, sql_query_grammar::Expr *expr);
+	int AddFieldAccess(ClientContext &cc, RandomGenerator &rg, sql_query_grammar::ComplicatedExpr *cexpr);
+	int GenerateSubquery(ClientContext &cc, RandomGenerator &rg, sql_query_grammar::Select *sel);
+	int GenerateColRef(ClientContext &cc, RandomGenerator &rg, sql_query_grammar::Expr *expr);
+	int GenerateLiteralValue(ClientContext &cc, RandomGenerator &rg, sql_query_grammar::Expr *expr);
 	int GeneratePredicate(ClientContext &cc, RandomGenerator &rg, sql_query_grammar::Expr *expr);
-	int GenerateExpression(ClientContext &cc, RandomGenerator &rg, SQLType *tp, sql_query_grammar::Expr *expr);
+	int GenerateExpression(ClientContext &cc, RandomGenerator &rg, sql_query_grammar::Expr *expr);
 
 	int GenerateOrderBy(ClientContext &cc, RandomGenerator &rg, sql_query_grammar::OrderByStatement *ob);
 	int GenerateLimit(ClientContext &cc, RandomGenerator &rg, const bool has_order_by, sql_query_grammar::LimitStatement *ls);
@@ -86,14 +91,17 @@ private:
 	int GenerateFromElement(ClientContext &cc, RandomGenerator &rg, sql_query_grammar::TableOrSubquery *tos);
 	int GenerateJoinConstraint(ClientContext &cc, RandomGenerator &rg, sql_query_grammar::JoinConstraint *jc);
 	int GenerateFromStatement(ClientContext &cc, RandomGenerator &rg, sql_query_grammar::FromStatement *ft);
-	int GenerateSelect(ClientContext &cc, RandomGenerator &rg, const bool top, const std::vector<SQLType*> &cols, sql_query_grammar::Select *sel);
+	int GenerateSelect(ClientContext &cc, RandomGenerator &rg, const bool top, const uint32_t ncols, sql_query_grammar::Select *sel);
 
 	int GenerateTopSelect(ClientContext &cc, RandomGenerator &rg, sql_query_grammar::TopSelect *sq);
 	int GenerateNextExplain(ClientContext &cc, RandomGenerator &rg, sql_query_grammar::ExplainQuery *sq);
 	int GenerateNextQuery(ClientContext &cc, RandomGenerator &rg, sql_query_grammar::SQLQueryInner *sq);
 
 	SQLType* BottomType(RandomGenerator &rg, const bool allow_dynamic_types, sql_query_grammar::BottomTypeName *tp);
+	SQLType* GenerateArraytype(RandomGenerator &rg, const bool allow_nullable, const bool allow_dynamic_types);
 	SQLType* GenerateArraytype(RandomGenerator &rg, const bool allow_nullable, const bool allow_dynamic_types, uint32_t &col_counter, sql_query_grammar::TopTypeName *tp);
+
+	SQLType* RandomNextType(RandomGenerator &rg, const bool allow_nullable, const bool allow_dynamic_types);
 	SQLType* RandomNextType(RandomGenerator &rg, const bool allow_nullable, const bool allow_dynamic_types, uint32_t &col_counter, sql_query_grammar::TopTypeName *tp);
 public:
 

@@ -377,6 +377,9 @@ CONV_FN(LiteralValue, lit_val) {
       ConvertToSqlString(ret, lit_val.string_lit());
       ret += '\'';
       break;
+    case LitValType::kNoQuoteStr:
+      ret += lit_val.no_quote_str();
+      break;
     case LitValType::kHexString: {
       const std::string &s = lit_val.hex_string();
       ret += "x'";
@@ -877,14 +880,30 @@ CONV_FN(ExprCase, e) {
 
 CONV_FN(SQLFuncCall, e) {
   ret += SQLFunc_Name(e.func()).substr(4);
+  if (e.params_size()) {
+    ret += '(';
+    for (int i = 0 ; i < e.params_size(); i++) {
+      if (i != 0) {
+        ret += ",";
+      }
+      ExprToString(ret, e.args(i));
+    }
+    ret += ')';
+  }
   ret += '(';
-  for (int i = 0 ; i < e.args_size() && i < 5; i++) {
+  if (e.distinct()) {
+    ret += "DISTINCT ";
+  }
+  for (int i = 0 ; i < e.args_size(); i++) {
     if (i != 0) {
       ret += ",";
     }
     ExprToString(ret, e.args(i));
   }
   ret += ')';
+  if (e.respect_nulls()) {
+    ret += " RESPECT NULLS";
+  }
 }
 
 CONV_FN(ComplicatedExpr, expr) {
@@ -964,7 +983,7 @@ CONV_FN(ComplicatedExpr, expr) {
       ret += ")";
     } break;
     default:
-      LiteralValueToString(ret, expr.lit_val());
+      ret += "1";
   }
   if (expr.has_field()) {
     FieldAccessToString(ret, expr.field());

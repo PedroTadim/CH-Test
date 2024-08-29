@@ -1673,7 +1673,7 @@ enum SQLFunc {
   FUNCJSONHas = 1668;
   FUNCJSONKey = 1669;
   FUNCJSONLength = 1670;
-  FUNCJSONMergePatch = 1671;
+  FUNCjsonMergePatch = 1671;
   FUNCJSONSharedDataPaths = 1672;
   FUNCJSONSharedDataPathsWithTypes = 1673;
   FUNCJSONType = 1674;
@@ -4256,4 +4256,13 @@ enum SQLFunc {
   FUNCYYYYMMDDToDate = 4251;
   FUNCYYYYMMDDToDate32 = 4252;
   FUNCzookeeperSessionUptime = 4253;
+  FUNCdate_add = 4254;
+  FUNCdate_sub = 4255;
+  FUNCtimestamp_add = 4256;
+  FUNCtimestamp_sub = 4257;
+  FUNCJSONDynamicPathsWithTypes = 4258;
+  FUNCoverlay = 4259;
+  FUNCoverlayUTF8 = 4260;
+  FUNCuntuple = 4261;
+  FUNCgrouping = 4262;
 }
