@@ -63,6 +63,15 @@ message LiteralValue {
   }
 }
 
+message NestedField {
+  oneof nested_oneof {
+    int32 array_index = 1;
+    Expr array_expr = 2;
+    Column array_key = 3;
+    uint32 tuple_index = 4;
+  }
+}
+
 message JSONColumn {
   required Column col = 1;
   oneof jcol_oneof {
@@ -71,21 +80,22 @@ message JSONColumn {
     TypeName json_cast = 4;
     TypeName json_reinterpret = 5;
   }
+  optional NestedField field = 6;
+}
+
+message JSONColumns {
+  repeated JSONColumn subcols = 1;
 }
 
 message FieldAccess {
   oneof field_oneof {
-    uint32 array_index = 1;
-    Expr array_expr = 2;
-    Column array_key = 3;
-    uint32 tuple_index = 4;
+    JSONColumns jcols = 1;
+    NestedField nfield = 2;
   }
 }
 
 message ExprColumn {
   required Column col = 1;
-  repeated JSONColumn subcols = 2;
-  optional FieldAccess field = 3;
 }
 
 message ExprSchemaTableColumn {
@@ -245,7 +255,6 @@ message ComplicatedExpr {
     ArraySequence array = 16;
     TupleSequence tuple = 17;
   }
-  optional FieldAccess field = 18;
 }
 
 message Expr {
@@ -253,6 +262,7 @@ message Expr {
     LiteralValue lit_val = 1;
     ComplicatedExpr comp_expr = 2;
   }
+  optional FieldAccess field = 3;
 }
 
 message ExprColAlias {

@@ -110,64 +110,78 @@ CONV_FN(ExprSchemaTable, st) {
   TableToString(ret, st.table_name());
 }
 
-CONV_FN(FieldAccess, fa) {
-  using FieldType = FieldAccess::FieldOneofCase;
-  switch (fa.field_oneof_case()) {
+CONV_FN(NestedField, nf) {
+  using FieldType = NestedField::NestedOneofCase;
+  switch (nf.nested_oneof_case()) {
     case FieldType::kArrayIndex:
       ret += "[";
-      ret += std::to_string(fa.array_index() % 10);
+      ret += nf.array_index() < 0 ? "-" : "";
+      ret += std::to_string(std::abs(nf.array_index()) % 10);
       ret += "]";
       break;
     case FieldType::kArrayExpr:
       ret += "[";
-      ExprToString(ret, fa.array_expr());
+      ExprToString(ret, nf.array_expr());
       ret += "]";
       break;
     case FieldType::kArrayKey:
       ret += "['";
-      ColumnToString(ret, fa.array_key());
+      ColumnToString(ret, nf.array_key());
       ret += "']";
       break;
     case FieldType::kTupleIndex:
       ret += ".";
-      ret += std::to_string(fa.tuple_index() % 10);
+      ret += std::to_string((nf.tuple_index() % 9) + 1);
       break;
     default:
-      ret += "[0]";
+      ret += "[1]";
   }
 }
 
 CONV_FN(TypeName, top);
 CONV_FN(TopTypeName, top);
 
+CONV_FN(JSONColumn, jcol) {
+  ret += ".";
+  if (jcol.has_json_col()) {
+    ret += "^";
+  }
+  ColumnToString(ret, jcol.col());
+  if (jcol.has_json_array()) {
+    const uint32_t limit = (jcol.json_array() % 4) + 1;
+
+    for (uint32_t j = 0; j < limit; j++) {
+      ret += "[]";
+    }
+  } else if (jcol.has_json_cast()) {
+    ret += "::";
+    TypeNameToString(ret, jcol.json_cast());
+  } else if (jcol.has_json_reinterpret()) {
+    ret += ".:`";
+    TypeNameToString(ret, jcol.json_reinterpret());
+    ret += "`";
+  }
+  if (jcol.has_field()) {
+    NestedFieldToString(ret, jcol.field());
+  }
+}
+
+CONV_FN(JSONColumns, jcols) {
+  for (int i = 0; i < jcols.subcols_size(); i++) {
+    JSONColumnToString(ret, jcols.subcols(i));
+  }
+}
+
+CONV_FN(FieldAccess, fa) {
+  if (fa.has_jcols()) {
+    JSONColumnsToString(ret, fa.jcols());
+  } else if (fa.has_nfield()) {
+    NestedFieldToString(ret, fa.nfield());
+  }
+}
+
 CONV_FN(ExprColumn, ec) {
   ColumnToString(ret, ec.col());
-  for (int i = 0; i < ec.subcols_size(); i++) {
-    const sql_query_grammar::JSONColumn &jcol = ec.subcols(i);
-
-    ret += ".";
-    if (jcol.has_json_col()) {
-      ret += "^";
-    }
-    ColumnToString(ret, jcol.col());
-    if (jcol.has_json_array()) {
-      const uint32_t limit = (jcol.json_array() % 4) + 1;
-
-      for (uint32_t j = 0; j < limit; j++) {
-        ret += "[]";
-      }
-    } else if (jcol.has_json_cast()) {
-      ret += "::";
-      TypeNameToString(ret, jcol.json_cast());
-    } else if (jcol.has_json_reinterpret()) {
-      ret += ".:`";
-      TypeNameToString(ret, jcol.json_reinterpret());
-      ret += "`";
-    }
-  }
-  if (ec.has_field()) {
-    FieldAccessToString(ret, ec.field());
-  }
 }
 
 CONV_FN(ExprSchemaTableColumn, stc) {
@@ -983,9 +997,6 @@ CONV_FN(ComplicatedExpr, expr) {
     default:
       ret += "1";
   }
-  if (expr.has_field()) {
-    FieldAccessToString(ret, expr.field());
-  }
 }
 
 CONV_FN(Expr, expr) {
@@ -995,6 +1006,9 @@ CONV_FN(Expr, expr) {
     ComplicatedExprToString(ret, expr.comp_expr());
   } else {  // default
     ret += "1";
+  }
+  if (expr.has_field()) {
+    FieldAccessToString(ret, expr.field());
   }
 }
 
