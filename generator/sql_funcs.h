@@ -57,7 +57,7 @@ const std::vector<CHAggregate> CHAggrs = {
 	CHAggregate(sql_query_grammar::SQLFunc::FUNCmedianTDigest, 1, 1, 1, 1, false, false),
 	CHAggregate(sql_query_grammar::SQLFunc::FUNCmedianTDigestWeighted, 1, 1, 2, 2, false, false),
 	CHAggregate(sql_query_grammar::SQLFunc::FUNCmedianBFloat16, 0, 1, 1, 1, false, false),
-	CHAggregate(sql_query_grammar::SQLFunc::FUNCmedianDD, 1, 2, 0, 1, false, false),
+	CHAggregate(sql_query_grammar::SQLFunc::FUNCmedianDD, 1, 2, 1, 1, false, false),
 	CHAggregate(sql_query_grammar::SQLFunc::FUNCrankCorr, 0, 0, 2, 2, false, false),
 	CHAggregate(sql_query_grammar::SQLFunc::FUNCsumKahan, 0, 0, 1, 1, false, false),
 	//clickhouse aggregates
