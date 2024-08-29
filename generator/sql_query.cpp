@@ -243,6 +243,7 @@ int StatementGenerator::GenerateFromStatement(ClientContext &cc, RandomGenerator
 	for (uint32_t i = 1 ; i < njoined; i++) {
 		sql_query_grammar::JoinClauseCore *jcc = jc->add_clauses();
 
+		this->depth++;
 		if (rg.NextSmallNumber() < 3) {
 			GenerateArrayJoin(cc, rg, jcc->mutable_arr());
 		} else {
@@ -271,7 +272,7 @@ int StatementGenerator::GenerateFromStatement(ClientContext &cc, RandomGenerator
 		this->width++;
 	}
 	this->width -= njoined;
-	this->depth--;
+	this->depth -= njoined;
 	return 0;
 }
 
