@@ -272,6 +272,15 @@ int StatementGenerator::GenerateExpression(ClientContext &cc, RandomGenerator &r
 		this->depth--;
 		delete tp;
 		AddFieldAccess(cc, rg, cexpr);
+	} else if (noption < 526) {
+		sql_query_grammar::ComplicatedExpr *cexpr = expr->mutable_comp_expr();
+		sql_query_grammar::UnaryExpr *uexpr = cexpr->mutable_unary_expr();
+
+		this->depth++;
+		uexpr->set_unary_op((sql_query_grammar::UnaryOperator) ((rg.NextRandomUInt32() % (uint32_t) sql_query_grammar::UnaryOperator::UNOP_PLUS) + 1));
+		this->GenerateExpression(cc, rg, uexpr->mutable_expr());
+		this->depth--;
+		AddFieldAccess(cc, rg, cexpr);
 	} else if (this->max_width > this->width + 2 && noption < 551) {
 		sql_query_grammar::ComplicatedExpr *cexpr = expr->mutable_comp_expr();
 		sql_query_grammar::CondExpr *conexpr = cexpr->mutable_expr_cond();
