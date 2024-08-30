@@ -136,11 +136,11 @@ public:
 	}
 
 	const char NextDigit() {
-		return static_cast<char>(digits(gen)) + '0';
+		return static_cast<char>(digits(gen));
 	}
 
 	const char NextJsonCol() {
-		return static_cast<char>(json_cols(gen)) + '0';
+		return static_cast<char>(json_cols(gen));
 	}
 
 	const double NextRandomDouble() {
