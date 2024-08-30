@@ -126,12 +126,20 @@ CONV_FN(JSONColumn, jcol) {
     for (uint32_t j = 0; j < limit; j++) {
       ret += "[]";
     }
-  } else if (jcol.has_json_cast()) {
+  }
+}
+
+CONV_FN(JSONColumns, jcols) {
+  JSONColumnToString(ret, jcols.jcol());
+  for (int i = 0; i < jcols.other_jcols_size(); i++) {
+    JSONColumnToString(ret, jcols.other_jcols(i));
+  }
+  if (jcols.has_json_cast()) {
     ret += "::";
-    TypeNameToString(ret, jcol.json_cast());
-  } else if (jcol.has_json_reinterpret()) {
+    TypeNameToString(ret, jcols.json_cast());
+  } else if (jcols.has_json_reinterpret()) {
     ret += ".:`";
-    TypeNameToString(ret, jcol.json_reinterpret());
+    TypeNameToString(ret, jcols.json_reinterpret());
     ret += "`";
   }
 }
@@ -166,8 +174,8 @@ CONV_FN(FieldAccess, fa) {
 
 CONV_FN(ExprColumn, ec) {
   ColumnToString(ret, ec.col());
-  for (int i = 0; i < ec.subcols_size(); i++) {
-    JSONColumnToString(ret, ec.subcols(i));
+  if (ec.has_subcols()) {
+    JSONColumnsToString(ret, ec.subcols());
   }
 }
 

@@ -34,38 +34,38 @@ int StatementGenerator::AddFieldAccess(ClientContext &cc, RandomGenerator &rg, s
 int StatementGenerator::AddJSONAccess(ClientContext &cc, RandomGenerator &rg, sql_query_grammar::ExprColumn *expr,
 									  const uint32_t json_prob) {
 	if (rg.NextMediumNumber() < json_prob) {
-		bool has_cast = false;
-		const uint32_t nvalues = std::max(std::min(this->max_width - this->width, rg.NextSmallNumber() % 5), UINT32_C(1));
+		sql_query_grammar::TypeName *tpn = nullptr;
+		sql_query_grammar::JSONColumns *subcols = expr->mutable_subcols();
+		const uint32_t noption = rg.NextMediumNumber(),
+					   nvalues = std::max(std::min(this->max_width - this->width, rg.NextSmallNumber() % 5), UINT32_C(1));
 
 		this->depth++;
-		for (uint32_t i = 0 ; i < nvalues; i++) {
+		for (uint32_t i = 0; i < nvalues; i++) {
 			std::string ret = "c";
-			const uint32_t noption = rg.NextMediumNumber();
-			sql_query_grammar::TypeName *tpn = nullptr;
-			sql_query_grammar::JSONColumn *jcol = expr->add_subcols();
+			const uint32_t noption2 = rg.NextMediumNumber();
+			sql_query_grammar::JSONColumn *jcol = i == 0 ? subcols->mutable_jcol() : subcols->add_other_jcols();
 
 			this->width++;
-			if (noption < 21) {
+			if (noption2 < 31) {
 				jcol->set_json_col(true);
-			} else if (this->depth >= this->max_depth || noption < 41) {
+			} else if (noption2 < 61) {
 				jcol->set_json_array(1);
-			} else if (has_cast || noption < 61) {
-				tpn = jcol->mutable_json_cast();
-				has_cast = true;
-			} else if (noption < 81) {
-				tpn = jcol->mutable_json_reinterpret();
 			}
-			if (tpn) {
-				uint32_t col_counter = 0;
-				SQLType *tp = RandomNextType(rg, true, true, col_counter, tpn->mutable_type());
-				delete tp;
-			}
-
 			ret += rg.NextJsonCol();
 			jcol->mutable_col()->set_column(ret);
 		}
-		this->depth--;
+		if (noption < 4) {
+			tpn = subcols->mutable_json_cast();
+		} else if (noption < 8) {
+			tpn = subcols->mutable_json_reinterpret();
+		}
 		this->width -= nvalues;
+		if (tpn) {
+			uint32_t col_counter = 0;
+			SQLType *tp = RandomNextType(rg, true, true, col_counter, tpn->mutable_type());
+			delete tp;
+		}
+		this->depth--;
 	}
 	return 0;
 }

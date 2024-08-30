@@ -68,8 +68,15 @@ message JSONColumn {
   oneof jcol_oneof {
     bool json_col = 2;
     uint32 json_array = 3;
-    TypeName json_cast = 4;
-    TypeName json_reinterpret = 5;
+  }
+}
+
+message JSONColumns {
+  required JSONColumn jcol = 1;
+  repeated JSONColumn other_jcols = 2;
+  oneof jcol_oneof {
+    TypeName json_cast = 3;
+    TypeName json_reinterpret = 4;
   }
 }
 
@@ -84,7 +91,7 @@ message FieldAccess {
 
 message ExprColumn {
   required Column col = 1;
-  repeated JSONColumn subcols = 2;
+  optional JSONColumns subcols = 2;
 }
 
 message ExprSchemaTableColumn {
