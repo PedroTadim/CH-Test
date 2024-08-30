@@ -785,6 +785,26 @@ message ExchangeTables {
   required ExprSchemaTable est2 = 2;
 }
 
+message UpdateSet {
+  required Column col = 1;
+  required Expr expr = 2;
+}
+
+message Update {
+  required UpdateSet update = 1;
+  repeated UpdateSet other_updates = 2;
+  required WhereStatement where = 3;
+}
+
+message AlterTable {
+  required ExprSchemaTable est = 1;
+  oneof alter_oneof {
+    WhereStatement del = 2;
+    Update update = 3;
+    TableOrderBy order = 4;
+  }
+}
+
 message SQLQueryInner {
   oneof query_inner_oneof {
     TopSelect select = 1;
@@ -797,8 +817,9 @@ message SQLQueryInner {
     CheckTable check = 8;
     DescTable desc = 9;
     ExchangeTables exchange = 10;
+    AlterTable alter_table = 11;
   }
-  required TopSelect def_select = 11;
+  required TopSelect def_select = 12;
 }
 
 message ExplainQuery {

@@ -1306,6 +1306,7 @@ CONV_FN(CreateTableDef, ct) {
 }
 
 CONV_FN(TableOrderBy, to) {
+  ret += " ORDER BY ";
   if (to.exprs_size() == 0) {
     ret += "tuple()";
   } else {
@@ -1343,7 +1344,6 @@ CONV_FN(CreateTable, create_table) {
   ret += ")";
   TableEngineToString(ret, create_table.engine());
   if (create_table.has_order()) {
-    ret += " ORDER BY ";
     TableOrderByToString(ret, create_table.order());
   }
   if (create_table.has_as_select_stmt()) {
@@ -1465,6 +1465,44 @@ CONV_FN(ExchangeTables, et) {
   ExprSchemaTableToString(ret, et.est2());
 }
 
+CONV_FN(UpdateSet, upt) {
+  ColumnToString(ret, upt.col());
+  ret += " = ";
+  ExprToString(ret, upt.expr());
+}
+
+CONV_FN(Update, upt) {
+  UpdateSetToString(ret, upt.update());
+  for (int i = 0; i < upt.other_updates_size(); i++) {
+    ret += ", ";
+    UpdateSetToString(ret, upt.other_updates(i));
+  }
+  ret += " WHERE ";
+  WhereStatementToString(ret, upt.where());
+}
+
+CONV_FN(AlterTable, alter) {
+  ret += "ALTER TABLE ";
+  ExprSchemaTableToString(ret, alter.est());
+  ret += " ";
+  using AlterType = AlterTable::AlterOneofCase;
+  switch (alter.alter_oneof_case()) {
+    case AlterType::kDel:
+      ret += " DELETE WHERE ";
+      WhereStatementToString(ret, alter.del());
+      break;
+    case AlterType::kUpdate:
+      UpdateToString(ret, alter.update());
+      break;
+    case AlterType::kOrder:
+      ret += " MODIFY";
+      TableOrderByToString(ret, alter.order());
+      break;
+    default:
+      ret += " DELETE WHERE TRUE";
+  }
+}
+
 CONV_FN(TopSelect, top) {
   SelectToString(ret, top.sel());
   if (top.has_format()) {
@@ -1505,6 +1543,9 @@ CONV_FN(SQLQueryInner, query) {
       break;
     case QueryType::kExchange:
       ExchangeTablesToString(ret, query.exchange());
+      break;
+    case QueryType::kAlterTable:
+      AlterTableToString(ret, query.alter_table());
       break;
     default:
       TopSelectToString(ret, query.def_select());

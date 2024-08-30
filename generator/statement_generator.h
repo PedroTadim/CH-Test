@@ -64,6 +64,7 @@ private:
 	void StrBuildJSONElement(RandomGenerator &rg, std::string &ret);
 	void StrBuildJSON(RandomGenerator &rg, const int depth, const int width, std::string &ret);
 
+	int GenerateTableOrderBy(ClientContext &cc, RandomGenerator &rg, const SQLTable &t, sql_query_grammar::TableOrderBy *tob);
 	int GenerateNextCreateTable(ClientContext &cc, RandomGenerator &rg, sql_query_grammar::CreateTable *sq);
 	int GenerateNextDropTable(ClientContext &cc, RandomGenerator &rg, sql_query_grammar::DropTable *sq);
 	int GenerateNextInsert(ClientContext &cc, RandomGenerator &rg, sql_query_grammar::Insert *sq);
@@ -73,6 +74,8 @@ private:
 	int GenerateNextCheckTable(ClientContext &cc, RandomGenerator &rg, sql_query_grammar::CheckTable *sq);
 	int GenerateNextDescTable(ClientContext &cc, RandomGenerator &rg, sql_query_grammar::DescTable *sq);
 	int GenerateNextExchangeTables(ClientContext &cc, RandomGenerator &rg, sql_query_grammar::ExchangeTables *sq);
+	int GenerateUptDelWhere(ClientContext &cc, RandomGenerator &rg, const SQLTable &t, sql_query_grammar::Expr *expr);
+	int GenerateAlterTable(ClientContext &cc, RandomGenerator &rg, sql_query_grammar::AlterTable *at);
 
 	int AddFieldAccess(ClientContext &cc, RandomGenerator &rg, sql_query_grammar::Expr *expr, const uint32_t nested_prob);
 	int AddJSONAccess(ClientContext &cc, RandomGenerator &rg, sql_query_grammar::ExprColumn *expr, const uint32_t json_prob);
