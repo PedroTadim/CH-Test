@@ -49,7 +49,7 @@ int StatementGenerator::AddJSONAccess(ClientContext &cc, RandomGenerator &rg, sq
 			if (noption2 < 31) {
 				jcol->set_json_col(true);
 			} else if (noption2 < 61) {
-				jcol->set_json_array(1);
+				jcol->set_json_array(0);
 			}
 			ret += rg.NextJsonCol();
 			jcol->mutable_col()->set_column(ret);
