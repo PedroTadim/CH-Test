@@ -19,7 +19,10 @@ int StatementGenerator::AddFieldAccess(ClientContext &cc, RandomGenerator &rg, s
 		} else if (noption < 71) {
 			fa->set_tuple_index(rg.NextRandomUInt32() % 5);
 		} else if (this->depth >= this->max_depth || noption < 81) {
-			fa->mutable_array_key()->set_column("c" + std::to_string(rg.NextJsonCol()));
+			std::string ret = "c";
+
+			ret += rg.NextJsonCol();
+			fa->mutable_array_key()->set_column(ret);
 		} else {
 			this->GenerateExpression(cc, rg, fa->mutable_array_expr());
 		}
@@ -36,6 +39,7 @@ int StatementGenerator::AddJSONAccess(ClientContext &cc, RandomGenerator &rg, sq
 
 		this->depth++;
 		for (uint32_t i = 0 ; i < nvalues; i++) {
+			std::string ret = "c";
 			const uint32_t noption = rg.NextMediumNumber();
 			sql_query_grammar::TypeName *tpn = nullptr;
 			sql_query_grammar::JSONColumn *jcol = expr->add_subcols();
@@ -56,7 +60,9 @@ int StatementGenerator::AddJSONAccess(ClientContext &cc, RandomGenerator &rg, sq
 				SQLType *tp = RandomNextType(rg, true, true, col_counter, tpn->mutable_type());
 				delete tp;
 			}
-			jcol->mutable_col()->set_column("c" + std::to_string(rg.NextJsonCol()));
+
+			ret += rg.NextJsonCol();
+			jcol->mutable_col()->set_column(ret);
 		}
 		this->depth--;
 		this->width -= nvalues;
