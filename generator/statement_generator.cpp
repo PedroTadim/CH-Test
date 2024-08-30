@@ -69,7 +69,7 @@ int StatementGenerator::GenerateNextCreateTable(ClientContext &cc, RandomGenerat
 			col.cname = cname;
 			cd->mutable_col()->set_column("c" + std::to_string(cname));
 			col.tp = new IntType(8, i == 1);
-			tn->mutable_type()->mutable_non_nullable()->set_integers(sql_query_grammar::Integers::Int32);
+			tn->mutable_type()->mutable_non_nullable()->set_integers(i == 1 ? sql_query_grammar::Integers::UInt8 : sql_query_grammar::Integers::Int8);
 
 			te->add_cols()->set_column("c" + std::to_string(cname));
 		}
