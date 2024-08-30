@@ -184,12 +184,11 @@ int StatementGenerator::GenerateNextInsert(ClientContext &cc, RandomGenerator &r
 
 int StatementGenerator::GenerateUptDelWhere(ClientContext &cc, RandomGenerator &rg, const SQLTable &t, sql_query_grammar::Expr *expr) {
 	if (rg.NextSmallNumber() < 8) {
-		const std::string tname = "t" + std::to_string(t.tname);
-		SQLRelation rel(tname);
+		SQLRelation rel("");
 
 		assert(this->current_level == 0);
 		for (const auto &entry : t.cols) {
-			rel.cols.push_back(SQLRelationCol(tname, "c" + std::to_string(entry.first), entry.second.tp));
+			rel.cols.push_back(SQLRelationCol("", "c" + std::to_string(entry.first), entry.second.tp));
 		}
 		this->levels[this->current_level].rels.push_back(std::move(rel));
 		GenerateWherePredicate(cc, rg, expr);
@@ -242,7 +241,7 @@ int StatementGenerator::GenerateAlterTable(ClientContext &cc, RandomGenerator &r
 	} else if (heavy_delete && nopt < (heavy_delete + alter_order_by + 1)) {
 		GenerateUptDelWhere(cc, rg, t, at->mutable_del()->mutable_expr()->mutable_expr());
 	} else {
-		SQLRelation rel(tname);
+		SQLRelation rel("");
 		sql_query_grammar::Update *upt = at->mutable_update();
 
 		for (const auto &col : t.cols) {
@@ -252,7 +251,7 @@ int StatementGenerator::GenerateAlterTable(ClientContext &cc, RandomGenerator &r
 
 		assert(this->current_level == 0);
 		for (const auto &entry : t.cols) {
-			rel.cols.push_back(SQLRelationCol(tname, "c" + std::to_string(entry.first), entry.second.tp));
+			rel.cols.push_back(SQLRelationCol("", "c" + std::to_string(entry.first), entry.second.tp));
 		}
 		this->levels[this->current_level].rels.push_back(std::move(rel));
 
