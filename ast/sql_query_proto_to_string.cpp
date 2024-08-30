@@ -1488,14 +1488,15 @@ CONV_FN(AlterTable, alter) {
   using AlterType = AlterTable::AlterOneofCase;
   switch (alter.alter_oneof_case()) {
     case AlterType::kDel:
-      ret += " DELETE WHERE ";
+      ret += "DELETE WHERE ";
       WhereStatementToString(ret, alter.del());
       break;
     case AlterType::kUpdate:
+      ret += "UPDATE ";
       UpdateToString(ret, alter.update());
       break;
     case AlterType::kOrder:
-      ret += " MODIFY";
+      ret += "MODIFY";
       TableOrderByToString(ret, alter.order());
       break;
     default:
