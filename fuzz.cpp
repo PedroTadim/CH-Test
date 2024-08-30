@@ -6,7 +6,7 @@
 
 #include <iostream>
 
-static void
+static bool
 RunQuery(std::string &ret, chfuzz::StatementGenerator &gen, chfuzz::ClientContext &cli, const sql_query_grammar::SQLQuery &sq) {
 	bool success = false;
 
@@ -25,16 +25,18 @@ RunQuery(std::string &ret, chfuzz::StatementGenerator &gen, chfuzz::ClientContex
 		}
 	}
 	gen.UpdateGenerator(sq, success);
+	return success;
 }
 
 int main() {
-
 	GOOGLE_PROTOBUF_VERIFY_VERSION;
 
 	chfuzz::ClientContext cli(clickhouse::ClientOptions().SetHost("localhost"));
 	chfuzz::RandomGenerator rg(0);
 	chfuzz::StatementGenerator gen;
+	sql_query_grammar::SQLQuery sq;
 	std::string ret;
+	int nsuccessfull = 0;
 
 	cli.LogQuery("DROP DATABASE IF EXISTS s0;");
 	cli.LogQuery("CREATE DATABASE s0;");
@@ -77,9 +79,13 @@ int main() {
 	cli.LogQuery("SET type_json_skip_duplicated_paths = 1;");
 
 	ret.reserve(4096);
+	for (int i = 0 ; i < 30 && nsuccessfull < 5; i++) {
+		sq.Clear();
+		gen.GenerateNextCreateTable(cli, rg, sq.mutable_inner_query()->mutable_create_table());
+		nsuccessfull += (RunQuery(ret, gen, cli, sq) ? 1 : 0);
+	}
 	while (true) {
-		sql_query_grammar::SQLQuery sq;
-
+		sq.Clear();
 		(void) gen.GenerateNextStatement(cli, rg, sq);
 		RunQuery(ret, gen, cli, sq);
 	}

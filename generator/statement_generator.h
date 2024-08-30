@@ -65,7 +65,6 @@ private:
 	void StrBuildJSON(RandomGenerator &rg, const int depth, const int width, std::string &ret);
 
 	int GenerateTableOrderBy(ClientContext &cc, RandomGenerator &rg, const SQLTable &t, sql_query_grammar::TableOrderBy *tob);
-	int GenerateNextCreateTable(ClientContext &cc, RandomGenerator &rg, sql_query_grammar::CreateTable *sq);
 	int GenerateNextDropTable(ClientContext &cc, RandomGenerator &rg, sql_query_grammar::DropTable *sq);
 	int GenerateNextInsert(ClientContext &cc, RandomGenerator &rg, sql_query_grammar::Insert *sq);
 	int GenerateNextDelete(ClientContext &cc, RandomGenerator &rg, sql_query_grammar::Delete *sq);
@@ -108,7 +107,7 @@ private:
 	SQLType* RandomNextType(RandomGenerator &rg, const bool allow_nullable, const bool allow_dynamic_types);
 	SQLType* RandomNextType(RandomGenerator &rg, const bool allow_nullable, const bool allow_dynamic_types, uint32_t &col_counter, sql_query_grammar::TopTypeName *tp);
 public:
-
+	int GenerateNextCreateTable(ClientContext &cc, RandomGenerator &rg, sql_query_grammar::CreateTable *sq);
 	int GenerateNextStatement(ClientContext &cc, RandomGenerator &rg, sql_query_grammar::SQLQuery &sq);
 
 	void UpdateGenerator(const sql_query_grammar::SQLQuery &sq, const bool success);
