@@ -8,55 +8,57 @@
 namespace chfuzz {
 
 int StatementGenerator::AddFieldAccess(ClientContext &cc, RandomGenerator &rg, sql_query_grammar::Expr *expr,
-									   const uint32_t json_prob, const uint32_t nested_prob) {
-	const bool has_json_field = rg.NextMediumNumber() < json_prob, has_nested = rg.NextMediumNumber() < nested_prob;
+									   const uint32_t nested_prob) {
 
-	if (has_json_field || has_nested) {
+	if (rg.NextMediumNumber() < nested_prob) {
+		const int noption = rg.NextMediumNumber();
 		sql_query_grammar::FieldAccess *fa = expr->mutable_field();
 
 		this->depth++;
-		if (has_json_field) {
-			const uint32_t nvalues = std::max(std::min(this->max_width - this->width, rg.NextSmallNumber() % 5), UINT32_C(1));
-
-			for (uint32_t i = 0 ; i < nvalues; i++) {
-				sql_query_grammar::TypeName *tpn = nullptr;
-				sql_query_grammar::JSONColumn *jcol = fa->add_subcols();
-				const uint32_t noption = rg.NextMediumNumber();
-
-				this->width++;
-				if (noption < 21) {
-					jcol->set_json_col(true);
-				} else if (noption < 41) {
-					jcol->set_json_array(1);
-				} else if (noption < 61) {
-					tpn = jcol->mutable_json_cast();
-				} else if (noption < 81) {
-					tpn = jcol->mutable_json_reinterpret();
-				}
-				if (tpn) {
-					uint32_t col_counter = 0;
-					SQLType *tp = RandomNextType(rg, true, true, col_counter, tpn->mutable_type());
-					delete tp;
-				}
-				jcol->mutable_col()->set_column("c" + std::to_string(rg.NextJsonCol()));
-			}
-			this->width -= nvalues;
-		}
-		if (has_nested) {
-			sql_query_grammar::NestedField *nf = fa->mutable_field();
-			const int noption = rg.NextMediumNumber();
-
-			if (noption < 41) {
-				nf->set_array_index(rg.NextRandomUInt32() % 5);
-			} else if (noption < 71) {
-				nf->set_tuple_index(rg.NextRandomUInt32() % 5);
-			} else if (this->depth >= this->max_depth || noption < 81) {
-				nf->mutable_array_key()->set_column("c" + std::to_string(rg.NextJsonCol()));
-			} else {
-				this->GenerateExpression(cc, rg, nf->mutable_array_expr());
-			}
+		if (noption < 41) {
+			fa->set_array_index(rg.NextRandomUInt32() % 5);
+		} else if (noption < 71) {
+			fa->set_tuple_index(rg.NextRandomUInt32() % 5);
+		} else if (this->depth >= this->max_depth || noption < 81) {
+			fa->mutable_array_key()->set_column("c" + std::to_string(rg.NextJsonCol()));
+		} else {
+			this->GenerateExpression(cc, rg, fa->mutable_array_expr());
 		}
 		this->depth--;
+	}
+	return 0;
+}
+
+int StatementGenerator::AddJSONAccess(ClientContext &cc, RandomGenerator &rg, sql_query_grammar::ExprColumn *expr,
+									  const uint32_t json_prob) {
+	if (rg.NextMediumNumber() < json_prob) {
+		const uint32_t nvalues = std::max(std::min(this->max_width - this->width, rg.NextSmallNumber() % 5), UINT32_C(1));
+
+		this->depth++;
+		for (uint32_t i = 0 ; i < nvalues; i++) {
+			const uint32_t noption = rg.NextMediumNumber();
+			sql_query_grammar::TypeName *tpn = nullptr;
+			sql_query_grammar::JSONColumn *jcol = expr->add_subcols();
+
+			this->width++;
+			if (noption < 21) {
+				jcol->set_json_col(true);
+			} else if (this->depth >= this->max_depth || noption < 41) {
+				jcol->set_json_array(1);
+			} else if (noption < 61) {
+				tpn = jcol->mutable_json_cast();
+			} else if (noption < 81) {
+				tpn = jcol->mutable_json_reinterpret();
+			}
+			if (tpn) {
+				uint32_t col_counter = 0;
+				SQLType *tp = RandomNextType(rg, true, true, col_counter, tpn->mutable_type());
+				delete tp;
+			}
+			jcol->mutable_col()->set_column("c" + std::to_string(rg.NextJsonCol()));
+		}
+		this->depth--;
+		this->width -= nvalues;
 	}
 	return 0;
 }
@@ -64,23 +66,18 @@ int StatementGenerator::AddFieldAccess(ClientContext &cc, RandomGenerator &rg, s
 int StatementGenerator::GenerateLiteralValue(ClientContext &cc, RandomGenerator &rg, sql_query_grammar::Expr *expr) {
 	const int noption = rg.NextLargeNumber();
 	sql_query_grammar::LiteralValue *lv = expr->mutable_lit_val();
-	uint32_t json_prob = 31, nested_prob = 16;
+	uint32_t nested_prob = 0;
 
 	if (noption < 101) {
 		lv->set_int_lit(rg.NextRandomInt64());
-		json_prob = nested_prob = 0;
 	} else if (noption < 201) {
 		lv->set_uint_lit(rg.NextRandomUInt64());
-		json_prob = nested_prob = 0;
 	} else if (noption < 251) {
 		lv->set_uint_lit(rg.NextDateTime());
-		json_prob = nested_prob = 0;
 	} else if (noption < 301) {
 		lv->set_uint_lit(rg.NextDateTime64());
-		json_prob = nested_prob = 0;
 	} else if (noption < 351) {
 		lv->set_uint_lit(rg.NextDate32());
-		json_prob = nested_prob = 0;
 	} else if (noption < 451) {
 		std::string ret;
 		std::uniform_int_distribution<uint32_t> next_dist(0, 30);
@@ -88,7 +85,6 @@ int StatementGenerator::GenerateLiteralValue(ClientContext &cc, RandomGenerator 
 
 		AppendDecimal(rg, ret, left, right);
 		lv->set_no_quote_str(ret);
-		json_prob = nested_prob = 0;
 	} else if (noption < 601) {
 		std::string ret;
 
@@ -96,13 +92,11 @@ int StatementGenerator::GenerateLiteralValue(ClientContext &cc, RandomGenerator 
 		rg.NextString(ret, 100000);
 		ret += "'";
 		lv->set_no_quote_str(ret);
-		json_prob = nested_prob = 0;
 	} else if (noption < 701) {
 		lv->set_special_val((sql_query_grammar::SpecialVal) ((rg.NextRandomUInt32() % (uint32_t) sql_query_grammar::SpecialVal_MAX) + 1));
-		json_prob = nested_prob = 3;
+		nested_prob = 3;
 	} else if (noption < 801) {
 		lv->set_special_val(rg.NextBool() ? sql_query_grammar::SpecialVal::VAL_ONE : sql_query_grammar::SpecialVal::VAL_ZERO);
-		json_prob = nested_prob = 0;
 	} else if (noption < 951) {
 		sql_query_grammar::LiteralValue *lv = expr->mutable_lit_val();
 		std::string ret;
@@ -113,12 +107,10 @@ int StatementGenerator::GenerateLiteralValue(ClientContext &cc, RandomGenerator 
 		ret += "'::JSON";
 		lv->set_no_quote_str(ret);
 		nested_prob = 0;
-		json_prob = 61;
 	} else {
 		lv->set_special_val(sql_query_grammar::SpecialVal::VAL_NULL);
-		json_prob = nested_prob = 0;
 	}
-	AddFieldAccess(cc, rg, expr, json_prob, nested_prob);
+	AddFieldAccess(cc, rg, expr, nested_prob);
 	return 0;
 }
 
@@ -143,11 +135,14 @@ int StatementGenerator::GenerateColRef(ClientContext &cc, RandomGenerator &rg, s
 	const SQLRelationCol &col = rg.PickRandomlyFromVector(available_cols);
 	sql_query_grammar::ComplicatedExpr *cexpr = expr->mutable_comp_expr();
 	sql_query_grammar::ExprSchemaTableColumn *estc = cexpr->mutable_expr_stc();
+	sql_query_grammar::ExprColumn *ecol = estc->mutable_col();
+
 	if (col.rel_name != "") {
 		estc->mutable_table()->set_table(col.rel_name);
 	}
-	estc->mutable_col()->mutable_col()->set_column(col.name);
-	AddFieldAccess(cc, rg, expr, 31, 16);
+	ecol->mutable_col()->set_column(col.name);
+	AddFieldAccess(cc, rg, expr, 16);
+	AddJSONAccess(cc, rg, ecol, 31);
 	return 0;
 }
 
@@ -276,7 +271,7 @@ int StatementGenerator::GeneratePredicate(ClientContext &cc, RandomGenerator &rg
 		} else {
 			return this->GenerateExpression(cc, rg, expr);
 		}
-		AddFieldAccess(cc, rg, expr, 0, 0);
+		AddFieldAccess(cc, rg, expr, 0);
 	} else {
 		return this->GenerateLiteralValue(cc, rg, expr);
 	}
@@ -485,7 +480,7 @@ int StatementGenerator::GenerateExpression(ClientContext &cc, RandomGenerator &r
 		}
 		this->depth--;
 		this->width -= generated_params;
-		AddFieldAccess(cc, rg, expr, 31, 16);
+		AddFieldAccess(cc, rg, expr, 16);
 	}
 	return 0;
 }

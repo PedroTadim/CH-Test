@@ -63,15 +63,6 @@ message LiteralValue {
   }
 }
 
-message NestedField {
-  oneof nested_oneof {
-    int32 array_index = 1;
-    Expr array_expr = 2;
-    Column array_key = 3;
-    uint32 tuple_index = 4;
-  }
-}
-
 message JSONColumn {
   required Column col = 1;
   oneof jcol_oneof {
@@ -83,12 +74,17 @@ message JSONColumn {
 }
 
 message FieldAccess {
-  repeated JSONColumn subcols = 1;
-  optional NestedField field = 2;
+  oneof nested_oneof {
+    int32 array_index = 1;
+    Expr array_expr = 2;
+    Column array_key = 3;
+    uint32 tuple_index = 4;
+  }
 }
 
 message ExprColumn {
   required Column col = 1;
+  repeated JSONColumn subcols = 2;
 }
 
 message ExprSchemaTableColumn {

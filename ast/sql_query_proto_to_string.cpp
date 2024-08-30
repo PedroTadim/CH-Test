@@ -110,33 +110,6 @@ CONV_FN(ExprSchemaTable, st) {
   TableToString(ret, st.table_name());
 }
 
-CONV_FN(NestedField, nf) {
-  using FieldType = NestedField::NestedOneofCase;
-  switch (nf.nested_oneof_case()) {
-    case FieldType::kArrayIndex:
-      ret += "[";
-      ret += nf.array_index() < 0 ? "-" : "";
-      ret += std::to_string(std::abs(nf.array_index()) % 10);
-      ret += "]";
-      break;
-    case FieldType::kArrayExpr:
-      ret += "[";
-      ExprToString(ret, nf.array_expr());
-      ret += "]";
-      break;
-    case FieldType::kArrayKey:
-      ret += "['";
-      ColumnToString(ret, nf.array_key());
-      ret += "']";
-      break;
-    case FieldType::kTupleIndex:
-      ret += ".";
-      ret += std::to_string((nf.tuple_index() % 9) + 1);
-      break;
-    default:
-      ret += "[1]";
-  }
-}
 
 CONV_FN(TypeName, top);
 CONV_FN(TopTypeName, top);
@@ -164,16 +137,38 @@ CONV_FN(JSONColumn, jcol) {
 }
 
 CONV_FN(FieldAccess, fa) {
-  for (int i = 0; i < fa.subcols_size(); i++) {
-    JSONColumnToString(ret, fa.subcols(i));
-  }
-  if (fa.has_field()) {
-    NestedFieldToString(ret, fa.field());
+  using FieldType = FieldAccess::NestedOneofCase;
+  switch (fa.nested_oneof_case()) {
+    case FieldType::kArrayIndex:
+      ret += "[";
+      ret += fa.array_index() < 0 ? "-" : "";
+      ret += std::to_string(std::abs(fa.array_index()) % 10);
+      ret += "]";
+      break;
+    case FieldType::kArrayExpr:
+      ret += "[";
+      ExprToString(ret, fa.array_expr());
+      ret += "]";
+      break;
+    case FieldType::kArrayKey:
+      ret += "['";
+      ColumnToString(ret, fa.array_key());
+      ret += "']";
+      break;
+    case FieldType::kTupleIndex:
+      ret += ".";
+      ret += std::to_string((fa.tuple_index() % 9) + 1);
+      break;
+    default:
+      ret += "[1]";
   }
 }
 
 CONV_FN(ExprColumn, ec) {
   ColumnToString(ret, ec.col());
+  for (int i = 0; i < ec.subcols_size(); i++) {
+    JSONColumnToString(ret, ec.subcols(i));
+  }
 }
 
 CONV_FN(ExprSchemaTableColumn, stc) {
