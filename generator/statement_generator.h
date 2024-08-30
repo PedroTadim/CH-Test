@@ -74,7 +74,7 @@ private:
 	int GenerateNextDescTable(ClientContext &cc, RandomGenerator &rg, sql_query_grammar::DescTable *sq);
 	int GenerateNextExchangeTables(ClientContext &cc, RandomGenerator &rg, sql_query_grammar::ExchangeTables *sq);
 
-	int AddFieldAccess(ClientContext &cc, RandomGenerator &rg, sql_query_grammar::ComplicatedExpr *cexpr);
+	int AddFieldAccess(ClientContext &cc, RandomGenerator &rg, sql_query_grammar::Expr *cexpr);
 	int GenerateSubquery(ClientContext &cc, RandomGenerator &rg, sql_query_grammar::Select *sel);
 	int GenerateColRef(ClientContext &cc, RandomGenerator &rg, sql_query_grammar::Expr *expr);
 	int GenerateLiteralValue(ClientContext &cc, RandomGenerator &rg, sql_query_grammar::Expr *expr);

@@ -68,8 +68,7 @@ public:
 										   ints64(std::numeric_limits<int64_t>::min(), std::numeric_limits<int64_t>::max()),
 										   uints64(std::numeric_limits<uint64_t>::min(), std::numeric_limits<uint64_t>::max()),
 										   doubles(std::numeric_limits<double>::min(), std::numeric_limits<double>::max()),
-										   json_cols(static_cast<uint8_t>('0'), static_cast<uint8_t>('5')),
-										   digits(static_cast<uint8_t>('0'), static_cast<uint8_t>('9')) {
+										   json_cols(0, 5), digits(0, 9) {
 		std::random_device rd;
 		gen = std::mt19937(seed ? seed : rd());
 
@@ -137,11 +136,11 @@ public:
 	}
 
 	const char NextDigit() {
-		return static_cast<char>(digits(gen));
+		return static_cast<char>(digits(gen)) + '0';
 	}
 
 	const char NextJsonCol() {
-		return json_cols(gen);
+		return static_cast<char>(json_cols(gen)) + '0';
 	}
 
 	const double NextRandomDouble() {
