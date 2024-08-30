@@ -22,7 +22,7 @@ int StatementGenerator::GenerateArrayJoin(ClientContext &cc, RandomGenerator &rg
 			estc->mutable_table()->set_table(rel1.name);
 		}
 		estc->mutable_col()->mutable_col()->set_column(col1.name);
-		AddFieldAccess(cc, rg, expr);
+		AddFieldAccess(cc, rg, expr, 31, 31);
 		tp = col1.tp;
 	} else {
 		tp = GenerateArraytype(rg, true, true);
@@ -134,8 +134,8 @@ int StatementGenerator::AddJoinClause(ClientContext &cc, RandomGenerator &rg, sq
 	}
 	estc1->mutable_col()->mutable_col()->set_column(col1.name);
 	estc2->mutable_col()->mutable_col()->set_column(col2.name);
-	AddFieldAccess(cc, rg, expr1);
-	AddFieldAccess(cc, rg, expr2);
+	AddFieldAccess(cc, rg, expr1, 31, 16);
+	AddFieldAccess(cc, rg, expr2, 31, 16);
 	return 0;
 }
 
@@ -210,7 +210,7 @@ int StatementGenerator::AddWhereFilter(ClientContext &cc, RandomGenerator &rg, s
 		estc->mutable_table()->set_table(rel1.name);
 	}
 	estc->mutable_col()->mutable_col()->set_column(col.name);
-	AddFieldAccess(cc, rg, lexpr);
+	AddFieldAccess(cc, rg, lexpr, 31, 16);
 	GenerateLiteralValue(cc, rg, rexpr);
 	return 0;
 }
@@ -313,7 +313,7 @@ int StatementGenerator::GenerateGroupBy(ClientContext &cc, RandomGenerator &rg, 
 					estc->mutable_table()->set_table(rel_col.rel_name);
 				}
 				estc->mutable_col()->mutable_col()->set_column(rel_col.name);
-				AddFieldAccess(cc, rg, expr);
+				AddFieldAccess(cc, rg, expr, 31, 16);
 				gcols.push_back(rel_col);
 			} else {
 				GenerateExpression(cc, rg, expr);
@@ -369,7 +369,7 @@ int StatementGenerator::GenerateOrderBy(ClientContext &cc, RandomGenerator &rg, 
 				estc->mutable_table()->set_table(src.rel_name);
 			}
 			estc->mutable_col()->mutable_col()->set_column(src.name);
-			AddFieldAccess(cc, rg, expr);
+			AddFieldAccess(cc, rg, expr, 31, 16);
 		} else if (next_option < 9) {
 			sql_query_grammar::LiteralValue *lv = expr->mutable_lit_val();
 

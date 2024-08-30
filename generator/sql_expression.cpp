@@ -7,8 +7,9 @@
 
 namespace chfuzz {
 
-int StatementGenerator::AddFieldAccess(ClientContext &cc, RandomGenerator &rg, sql_query_grammar::Expr *expr) {
-	const bool has_json_field = rg.NextMediumNumber() < 31, has_nested = rg.NextMediumNumber() < 16;
+int StatementGenerator::AddFieldAccess(ClientContext &cc, RandomGenerator &rg, sql_query_grammar::Expr *expr,
+									   const uint32_t json_prob, const uint32_t nested_prob) {
+	const bool has_json_field = rg.NextMediumNumber() < json_prob, has_nested = rg.NextMediumNumber() < nested_prob;
 
 	if (has_json_field || has_nested) {
 		sql_query_grammar::FieldAccess *fa = expr->mutable_field();
@@ -20,7 +21,6 @@ int StatementGenerator::AddFieldAccess(ClientContext &cc, RandomGenerator &rg, s
 			for (uint32_t i = 0 ; i < nvalues; i++) {
 				sql_query_grammar::TypeName *tpn = nullptr;
 				sql_query_grammar::JSONColumn *jcol = fa->add_subcols();
-				const std::string cname = "c" + std::to_string(rg.NextJsonCol());
 				const uint32_t noption = rg.NextMediumNumber();
 
 				this->width++;
@@ -38,7 +38,7 @@ int StatementGenerator::AddFieldAccess(ClientContext &cc, RandomGenerator &rg, s
 					SQLType *tp = RandomNextType(rg, true, true, col_counter, tpn->mutable_type());
 					delete tp;
 				}
-				jcol->mutable_col()->set_column(cname);
+				jcol->mutable_col()->set_column("c" + std::to_string(rg.NextJsonCol()));
 			}
 			this->width -= nvalues;
 		}
@@ -64,17 +64,23 @@ int StatementGenerator::AddFieldAccess(ClientContext &cc, RandomGenerator &rg, s
 int StatementGenerator::GenerateLiteralValue(ClientContext &cc, RandomGenerator &rg, sql_query_grammar::Expr *expr) {
 	const int noption = rg.NextLargeNumber();
 	sql_query_grammar::LiteralValue *lv = expr->mutable_lit_val();
+	uint32_t json_prob = 31, nested_prob = 16;
 
 	if (noption < 101) {
 		lv->set_int_lit(rg.NextRandomInt64());
+		json_prob = nested_prob = 0;
 	} else if (noption < 201) {
 		lv->set_uint_lit(rg.NextRandomUInt64());
+		json_prob = nested_prob = 0;
 	} else if (noption < 251) {
 		lv->set_uint_lit(rg.NextDateTime());
+		json_prob = nested_prob = 0;
 	} else if (noption < 301) {
 		lv->set_uint_lit(rg.NextDateTime64());
+		json_prob = nested_prob = 0;
 	} else if (noption < 351) {
 		lv->set_uint_lit(rg.NextDate32());
+		json_prob = nested_prob = 0;
 	} else if (noption < 451) {
 		std::string ret;
 		std::uniform_int_distribution<uint32_t> next_dist(0, 30);
@@ -82,6 +88,7 @@ int StatementGenerator::GenerateLiteralValue(ClientContext &cc, RandomGenerator 
 
 		AppendDecimal(rg, ret, left, right);
 		lv->set_no_quote_str(ret);
+		json_prob = nested_prob = 0;
 	} else if (noption < 601) {
 		std::string ret;
 
@@ -89,10 +96,13 @@ int StatementGenerator::GenerateLiteralValue(ClientContext &cc, RandomGenerator 
 		rg.NextString(ret, 100000);
 		ret += "'";
 		lv->set_no_quote_str(ret);
+		json_prob = nested_prob = 0;
 	} else if (noption < 701) {
 		lv->set_special_val((sql_query_grammar::SpecialVal) ((rg.NextRandomUInt32() % (uint32_t) sql_query_grammar::SpecialVal_MAX) + 1));
+		json_prob = nested_prob = 3;
 	} else if (noption < 801) {
 		lv->set_special_val(rg.NextBool() ? sql_query_grammar::SpecialVal::VAL_ONE : sql_query_grammar::SpecialVal::VAL_ZERO);
+		json_prob = nested_prob = 0;
 	} else if (noption < 951) {
 		sql_query_grammar::LiteralValue *lv = expr->mutable_lit_val();
 		std::string ret;
@@ -102,10 +112,13 @@ int StatementGenerator::GenerateLiteralValue(ClientContext &cc, RandomGenerator 
 		StrBuildJSON(rg, dopt(rg.gen), wopt(rg.gen), ret);
 		ret += "'::JSON";
 		lv->set_no_quote_str(ret);
+		nested_prob = 0;
+		json_prob = 61;
 	} else {
 		lv->set_special_val(sql_query_grammar::SpecialVal::VAL_NULL);
+		json_prob = nested_prob = 0;
 	}
-	AddFieldAccess(cc, rg, expr);
+	AddFieldAccess(cc, rg, expr, json_prob, nested_prob);
 	return 0;
 }
 
@@ -134,7 +147,7 @@ int StatementGenerator::GenerateColRef(ClientContext &cc, RandomGenerator &rg, s
 		estc->mutable_table()->set_table(col.rel_name);
 	}
 	estc->mutable_col()->mutable_col()->set_column(col.name);
-	AddFieldAccess(cc, rg, expr);
+	AddFieldAccess(cc, rg, expr, 31, 16);
 	return 0;
 }
 
@@ -263,7 +276,7 @@ int StatementGenerator::GeneratePredicate(ClientContext &cc, RandomGenerator &rg
 		} else {
 			return this->GenerateExpression(cc, rg, expr);
 		}
-		AddFieldAccess(cc, rg, expr);
+		AddFieldAccess(cc, rg, expr, 0, 0);
 	} else {
 		return this->GenerateLiteralValue(cc, rg, expr);
 	}
@@ -472,7 +485,7 @@ int StatementGenerator::GenerateExpression(ClientContext &cc, RandomGenerator &r
 		}
 		this->depth--;
 		this->width -= generated_params;
-		AddFieldAccess(cc, rg, expr);
+		AddFieldAccess(cc, rg, expr, 31, 16);
 	}
 	return 0;
 }
