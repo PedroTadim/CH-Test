@@ -90,7 +90,7 @@ private:
 	int AddJoinClause(ClientContext &cc, RandomGenerator &rg, sql_query_grammar::BinaryExpr *bexpr);
 	int GenerateArrayJoin(ClientContext &cc, RandomGenerator &rg, sql_query_grammar::ArrayJoin *aj);
 	int GenerateFromElement(ClientContext &cc, RandomGenerator &rg, sql_query_grammar::TableOrSubquery *tos);
-	int GenerateJoinConstraint(ClientContext &cc, RandomGenerator &rg, sql_query_grammar::JoinConstraint *jc);
+	int GenerateJoinConstraint(ClientContext &cc, RandomGenerator &rg, const bool allow_using, sql_query_grammar::JoinConstraint *jc);
 	int GenerateFromStatement(ClientContext &cc, RandomGenerator &rg, sql_query_grammar::FromStatement *ft);
 	int GenerateSelect(ClientContext &cc, RandomGenerator &rg, const bool top, const uint32_t ncols, sql_query_grammar::Select *sel);
 

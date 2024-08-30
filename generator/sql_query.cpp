@@ -144,12 +144,11 @@ int StatementGenerator::AddJoinClause(ClientContext &cc, RandomGenerator &rg, sq
 	return 0;
 }
 
-int StatementGenerator::GenerateJoinConstraint(ClientContext &cc, RandomGenerator &rg, sql_query_grammar::JoinConstraint *jc) {
+int StatementGenerator::GenerateJoinConstraint(ClientContext &cc, RandomGenerator &rg, const bool allow_using, sql_query_grammar::JoinConstraint *jc) {
 	if (rg.NextSmallNumber() < 8) {
-		//using clause
 		bool generated = false;
 
-		if (rg.NextSmallNumber() < 3) {
+		if (allow_using && rg.NextSmallNumber() < 3) {
 			//using clause
 			const SQLRelation &rel1 = rg.PickRandomlyFromVector(this->levels[this->current_level].rels),
 							  &rel2 = this->levels[this->current_level].rels.back();
@@ -282,7 +281,7 @@ int StatementGenerator::GenerateFromStatement(ClientContext &cc, RandomGenerator
 				}
 			}
 			GenerateFromElement(cc, rg, core->mutable_tos());
-			GenerateJoinConstraint(cc, rg, core->mutable_join_constraint());
+			GenerateJoinConstraint(cc, rg, njoined == 1, core->mutable_join_constraint());
 		}
 	}
 	this->width -= njoined;
