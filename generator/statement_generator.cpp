@@ -75,6 +75,9 @@ int StatementGenerator::GenerateNextCreateTable(ClientContext &cc, RandomGenerat
 	}
 
 	ids.clear();
+	if (rg.NextSmallNumber() < 5) {
+		GenerateSelect(cc, rg, true, next.cols.size(), ct->mutable_as_select_stmt());
+	}
 	this->staged_tables[tname] = std::move(next);
 	return 0;
 }
@@ -176,9 +179,23 @@ int StatementGenerator::GenerateNextInsert(ClientContext &cc, RandomGenerator &r
 
 int StatementGenerator::GenerateNextDelete(ClientContext &cc, RandomGenerator &rg, sql_query_grammar::Delete *del) {
 	const SQLTable &t = rg.PickValueRandomlyFromMap(this->tables);
+	sql_query_grammar::Expr *expr = del->mutable_where()->mutable_expr()->mutable_expr();
+	const std::string tname = "t" + std::to_string(t.tname);
 
-	del->mutable_est()->mutable_table_name()->set_table("t" + std::to_string(t.tname));
-	del->mutable_where()->mutable_expr()->mutable_expr()->mutable_lit_val()->set_special_val(sql_query_grammar::SpecialVal::VAL_TRUE);
+	del->mutable_est()->mutable_table_name()->set_table(tname);
+	if (rg.NextSmallNumber() < 6) {
+		SQLRelation rel(tname);
+
+		assert(this->current_level == 0);
+		for (const auto &entry : t.cols) {
+			rel.cols.push_back(SQLRelationCol(tname, "c" + std::to_string(entry.first), entry.second.tp));
+		}
+		this->levels[this->current_level].rels.push_back(std::move(rel));
+		GenerateWherePredicate(cc, rg, expr);
+		this->levels.clear();
+	} else {
+		expr->mutable_lit_val()->set_special_val(sql_query_grammar::SpecialVal::VAL_TRUE);
+	}
 	return 0;
 }
 
