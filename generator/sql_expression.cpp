@@ -31,6 +31,7 @@ int StatementGenerator::AddFieldAccess(ClientContext &cc, RandomGenerator &rg, s
 int StatementGenerator::AddJSONAccess(ClientContext &cc, RandomGenerator &rg, sql_query_grammar::ExprColumn *expr,
 									  const uint32_t json_prob) {
 	if (rg.NextMediumNumber() < json_prob) {
+		bool has_cast = false;
 		const uint32_t nvalues = std::max(std::min(this->max_width - this->width, rg.NextSmallNumber() % 5), UINT32_C(1));
 
 		this->depth++;
@@ -44,8 +45,9 @@ int StatementGenerator::AddJSONAccess(ClientContext &cc, RandomGenerator &rg, sq
 				jcol->set_json_col(true);
 			} else if (this->depth >= this->max_depth || noption < 41) {
 				jcol->set_json_array(1);
-			} else if (noption < 61) {
+			} else if (has_cast || noption < 61) {
 				tpn = jcol->mutable_json_cast();
+				has_cast = true;
 			} else if (noption < 81) {
 				tpn = jcol->mutable_json_reinterpret();
 			}
