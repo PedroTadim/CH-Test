@@ -23,6 +23,7 @@ int StatementGenerator::GenerateNextCreateTable(ClientContext &cc, RandomGenerat
 	sql_query_grammar::TableEngine_TableEngineValues val = (sql_query_grammar::TableEngine_TableEngineValues) nopt;
 
 	te->set_engine(val);
+	next.teng = val;
 	for (uint32_t i = 0 ; i < ncols ; i++) {
 		SQLColumn col;
 		const uint32_t cname = next.col_counter++;
@@ -133,6 +134,15 @@ int StatementGenerator::GenerateNextInsert(ClientContext &cc, RandomGenerator &r
 	const SQLTable &t = rg.PickValueRandomlyFromMap(this->tables);
 	const uint32_t nrows = rg.NextMediumNumber(), ncols = t.cols.size();
 	std::string ret;
+	uint32_t sign_col = 10000;
+
+	switch (t.teng) {
+		case sql_query_grammar::TableEngine_TableEngineValues::TableEngine_TableEngineValues_CollapsingMergeTree:
+			sign_col = t.cols.size() - 1;
+			break;
+		default:
+			break;
+	}
 
 	ins->mutable_est()->mutable_table_name()->set_table("t" + std::to_string(t.tname));
 	for (const auto &entry : t.cols) {
@@ -140,19 +150,22 @@ int StatementGenerator::GenerateNextInsert(ClientContext &cc, RandomGenerator &r
 	}
 	this->max_depth = 4;
 	for (uint32_t i = 0 ; i < nrows; i++) {
-		bool first = true;
+		uint32_t j = 0;
 
 		if (i != 0) {
 			ret += ", ";
 		}
 		ret += "(";
 		for (const auto &entry : t.cols) {
-			if (first) {
-				first = false;
-			} else {
+			if (j != 0) {
 				ret += ", ";
 			}
-			StrAppendAnyValue(rg, ret, entry.second.tp);
+			if (j == sign_col) {
+				ret += rg.NextBool() ? "1" : "-1";
+			} else {
+				StrAppendAnyValue(rg, ret, entry.second.tp);
+			}
+			j++;
 		}
 		ret += ")";
 	}
