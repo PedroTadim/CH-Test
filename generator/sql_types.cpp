@@ -261,7 +261,7 @@ SQLType* StatementGenerator::RandomNextType(RandomGenerator &rg, const bool allo
 	} else {
 		//tuple
 		sql_query_grammar::TupleType *tt = tp ? tp->mutable_tuple() : nullptr;
-		const uint32_t ncols = rg.NextMediumNumber() % (std::min<uint32_t>(5, this->max_width - this->width));
+		const uint32_t ncols = (rg.NextMediumNumber() % (std::min<uint32_t>(5, this->max_width - this->width))) + UINT32_C(2);
 		std::vector<SubType> subtypes;
 
 		this->depth++;
