@@ -382,16 +382,16 @@ void StatementGenerator::StrAppendBottomValue(RandomGenerator &rg, std::string &
 void StatementGenerator::StrAppendMap(RandomGenerator &rg, std::string &ret, MapType *mt) {
 	const uint32_t limit = (rg.NextSmallNumber() - 1);
 
-	ret += "{";
+	ret += "map(";
 	for (uint32_t i = 0 ; i < limit; i++) {
 		if (i != 0) {
 			ret += ", ";
 		}
 		StrAppendAnyValue(rg, ret, mt->key);
-		ret += ":";
+		ret += ",";
 		StrAppendAnyValue(rg, ret, mt->value);
 	}
-	ret += "}";
+	ret += ")";
 }
 
 void StatementGenerator::StrAppendArray(RandomGenerator &rg, std::string &ret, ArrayType *at) {
