@@ -67,6 +67,7 @@ int StatementGenerator::AddJSONAccess(ClientContext &cc, RandomGenerator &rg, sq
 		}
 		this->depth--;
 	}
+	expr->set_null(rg.NextMediumNumber() < 4);
 	return 0;
 }
 

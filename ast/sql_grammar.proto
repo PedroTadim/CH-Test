@@ -92,6 +92,7 @@ message FieldAccess {
 message ExprColumn {
   required Column col = 1;
   optional JSONColumns subcols = 2;
+  optional bool null = 3;
 }
 
 message ExprSchemaTableColumn {

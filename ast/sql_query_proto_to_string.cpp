@@ -177,6 +177,9 @@ CONV_FN(ExprColumn, ec) {
   if (ec.has_subcols()) {
     JSONColumnsToString(ret, ec.subcols());
   }
+  if (ec.null()) {
+    ret += ".null";
+  }
 }
 
 CONV_FN(ExprSchemaTableColumn, stc) {
