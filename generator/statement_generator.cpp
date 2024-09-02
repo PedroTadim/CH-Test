@@ -334,8 +334,20 @@ int StatementGenerator::GenerateNextExplain(ClientContext &cc, RandomGenerator &
 int StatementGenerator::GenerateNextStatement(ClientContext &cc, RandomGenerator &rg, sql_query_grammar::SQLQuery &sq) {
 	const uint32_t noption = rg.NextMediumNumber();
 
-	if (noption < 15) {
+	if (noption < 11) {
 		return GenerateNextExplain(cc, rg, sq.mutable_explain());
+	} else if (this->in_transaction && noption < 41) {
+		if (rg.NextBool()) {
+			sq.set_commit_trans(true);
+		} else {
+			sq.set_rollback_trans(true);
+		}
+		this->in_transaction = false;
+		return 0;
+	} else if (!this->in_transaction && noption < 16) {
+		sq.set_start_trans(true);
+		this->in_transaction = true;
+		return 0;
 	} else {
 		return GenerateNextQuery(cc, rg, sq.mutable_inner_query());
 	}

@@ -1606,6 +1606,15 @@ CONV_FN(SQLQuery, query) {
     case QueryType::kExplain:
       ExplainQueryToString(ret, query.explain());
       break;
+    case QueryType::kStartTrans:
+      ret += "BEGIN TRANSACTION";
+      break;
+    case QueryType::kCommitTrans:
+      ret += "COMMIT";
+      break;
+    case QueryType::kRollbackTrans:
+      ret += "ROLLBACK";
+      break;
     default:
       SQLQueryInnerToString(ret, query.def_query());
   }

@@ -44,6 +44,7 @@ public:
 
 class StatementGenerator {
 private:
+	bool in_transaction = false;
 	uint32_t table_counter = 0, current_level = 0;
 	std::map<uint32_t, SQLTable> staged_tables, tables;
 
