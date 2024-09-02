@@ -341,8 +341,8 @@ message JoinedDerivedQuery {
 
 message JoinedTable {
   required ExprSchemaTable est = 1;
-  optional bool final = 2;
-  optional Table table_alias = 3;
+  optional Table table_alias = 2;
+  optional bool final = 3;
 }
 
 message TableOrSubquery {

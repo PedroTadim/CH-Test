@@ -1103,12 +1103,12 @@ CONV_FN(JoinedDerivedQuery, tos) {
 
 CONV_FN(JoinedTable, jt) {
   ExprSchemaTableToString(ret, jt.est());
-  if (jt.final()) {
-    ret += " FINAL";
-  }
   if (jt.has_table_alias()) {
     ret += " ";
     TableToString(ret, jt.table_alias());
+  }
+  if (jt.final()) {
+    ret += " FINAL";
   }
 }
 
