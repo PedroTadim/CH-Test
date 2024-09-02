@@ -92,7 +92,9 @@ int StatementGenerator::GenerateFromElement(ClientContext &cc, RandomGenerator &
 			rel.cols.push_back(SQLRelationCol(name, "c" + std::to_string(entry.first), entry.second.tp));
 		}
 		jt->mutable_table_alias()->set_table(name);
-		jt->set_final(rg.NextSmallNumber() < 3);
+		jt->set_final(t.teng != sql_query_grammar::TableEngine_TableEngineValues::TableEngine_TableEngineValues_Memory &&
+					  t.teng != sql_query_grammar::TableEngine_TableEngineValues::TableEngine_TableEngineValues_MergeTree &&
+					  rg.NextSmallNumber() < 3);
 	} else {
 		//fallback case
 		sql_query_grammar::JoinedDerivedQuery *jdq = tos->mutable_jdq();
