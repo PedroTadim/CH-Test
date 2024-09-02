@@ -336,7 +336,7 @@ int StatementGenerator::GenerateNextStatement(ClientContext &cc, RandomGenerator
 
 	if (noption < 11) {
 		return GenerateNextExplain(cc, rg, sq.mutable_explain());
-	} else if (this->in_transaction && noption < 41) {
+	} /*else if (this->in_transaction && noption < 41) {
 		if (rg.NextBool()) {
 			sq.set_commit_trans(true);
 		} else {
@@ -348,7 +348,7 @@ int StatementGenerator::GenerateNextStatement(ClientContext &cc, RandomGenerator
 		sq.set_start_trans(true);
 		this->in_transaction = true;
 		return 0;
-	} else {
+	}*/ else {
 		return GenerateNextQuery(cc, rg, sq.mutable_inner_query());
 	}
 }

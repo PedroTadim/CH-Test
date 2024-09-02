@@ -60,8 +60,7 @@ int main() {
 				 "allow_create_index_without_type = 1,"
 				 "allow_experimental_s3queue = 1,"
 				 "allow_experimental_analyzer = 1,"
-				 "type_json_skip_duplicated_paths = 1,"
-				 "allow_experimental_transactions = 1;");
+				 "type_json_skip_duplicated_paths = 1;");
 
 	ret.reserve(4096);
 	for (int i = 0 ; i < 30 && nsuccessfull < 5; i++) {
