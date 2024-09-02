@@ -1,29 +1,13 @@
 #include <clickhouse/client.h>
 #include <cstring>
-#include <exception>
 #include "generator/statement_generator.h"
 #include "ast/sql_query_proto_to_string.h"
 
-#include <iostream>
-
 static bool
 RunQuery(std::string &ret, chfuzz::StatementGenerator &gen, chfuzz::ClientContext &cli, const sql_query_grammar::SQLQuery &sq) {
-	bool success = false;
-
 	ret.resize(0);
 	sql_fuzzer::SQLQueryToString(ret, sq);
-	try {
-		std::cout << "Running query: " << ret << std::endl;
-
-		cli.LogQuery(ret);
-		success = true;
-	} catch (const std::exception & e) {
-		std::cout << "Got exception " << e.what() << std::endl;
-		if (std::strstr(e.what(), "Broken pipe")) {
-			std::cerr << "Server crashed, exiting" << std::endl;
-			std::exit(1);
-		}
-	}
+	const bool success = cli.LogQuery(ret);
 	gen.UpdateGenerator(sq, success);
 	return success;
 }
