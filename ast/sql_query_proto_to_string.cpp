@@ -1268,13 +1268,15 @@ CONV_FN(SelectStatementCore, ssc) {
 }
 
 CONV_FN(SetQuery, setq) {
+  ret += "(";
   SelectToString(ret, setq.sel1());
-  ret += " ";
+  ret += ") ";
   ret += SetQuery_SetOp_Name(setq.set_op());
   ret += " ";
   ret += AllOrDistinct_Name(setq.s_or_d());
-  ret += " ";
+  ret += " (";
   SelectToString(ret, setq.sel2());
+  ret += ")";
 }
 
 CONV_FN(CTEquery, cteq) {
