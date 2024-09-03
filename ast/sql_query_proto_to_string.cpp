@@ -792,9 +792,9 @@ CONV_FN(ExprLike, e) {
 CONV_FN(CondExpr, e) {
   ret += "(";
   ExprToString(ret, e.expr1());
-  ret += " ? ";
+  ret += ") ? (";
   ExprToString(ret, e.expr2());
-  ret += " : ";
+  ret += ") : (";
   ExprToString(ret, e.expr3());
   ret += ")";
 }
@@ -1268,15 +1268,13 @@ CONV_FN(SelectStatementCore, ssc) {
 }
 
 CONV_FN(SetQuery, setq) {
-  ret += "(";
   SelectToString(ret, setq.sel1());
-  ret += ") ";
+  ret += " ";
   ret += SetQuery_SetOp_Name(setq.set_op());
   ret += " ";
   ret += AllOrDistinct_Name(setq.s_or_d());
-  ret += " (";
+  ret += " ";
   SelectToString(ret, setq.sel2());
-  ret += ")";
 }
 
 CONV_FN(CTEquery, cteq) {
