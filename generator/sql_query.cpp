@@ -475,7 +475,7 @@ int StatementGenerator::GenerateSelect(ClientContext &cc, RandomGenerator &rg, c
 
 	this->levels[this->current_level] = QueryLevel(this->current_level);
 
-	if (this->depth < this->max_depth && this->max_width > this->width && rg.NextSmallNumber() < 3) {
+	if (this->depth < this->max_depth && this->width < this->max_width && rg.NextSmallNumber() < 3) {
 		const uint32_t nclauses = std::min<uint32_t>(this->max_width - this->width, ((uint32_t)rg.NextRandomUInt32() % 3) + 1);
 
 		this->depth++;
@@ -489,9 +489,9 @@ int StatementGenerator::GenerateSelect(ClientContext &cc, RandomGenerator &rg, c
 			name += std::to_string(this->current_level);
 			SQLRelation rel(name);
 
-			this->width++;
 			GenerateDerivedTable(cc, rg, rel, cte->mutable_query());
 			this->ctes[this->current_level][name] = std::move(rel);
+			this->width++;
 		}
 		this->width -= nclauses;
 		this->depth--;
