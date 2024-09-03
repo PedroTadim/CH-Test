@@ -27,62 +27,82 @@ int StatementGenerator::GenerateTableOrderBy(ClientContext &cc, RandomGenerator 
 
 int StatementGenerator::GenerateNextCreateTable(ClientContext &cc, RandomGenerator &rg, sql_query_grammar::CreateTable *ct) {
 	SQLTable next;
-	const uint32_t tname = this->table_counter++;
+	std::uniform_int_distribution<uint32_t> table_engine(1, sql_query_grammar::TableEngineValues_MAX);
+	const uint32_t tname = this->table_counter++, nopt = table_engine(rg.gen);
+	sql_query_grammar::TableEngineValues val = (sql_query_grammar::TableEngineValues) nopt;
 
 	next.tname = tname;
 	ct->mutable_est()->mutable_table_name()->set_table("t" + std::to_string(next.tname));
 
-	const uint32_t ncols = (rg.NextMediumNumber() % 5) + 1;
-	sql_query_grammar::CreateTableDef *ctdef = ct->mutable_def();
-	std::uniform_int_distribution<uint32_t> table_engine(1, sql_query_grammar::TableEngine::TableEngineValues_MAX);
-	const uint32_t nopt = table_engine(rg.gen);
-	sql_query_grammar::TableEngine *te = ct->mutable_engine();
-	sql_query_grammar::TableEngine_TableEngineValues val = (sql_query_grammar::TableEngine_TableEngineValues) nopt;
+	if (tables.empty() || rg.NextSmallNumber() < 9) {
+		sql_query_grammar::CreateTableDef *ctdef = ct->mutable_table_def();
+		sql_query_grammar::ColumnsDef *colsdef = ctdef->mutable_def();
+		sql_query_grammar::TableEngine *te = ctdef->mutable_engine();
+		const uint32_t ncols = (rg.NextMediumNumber() % 5) + 1;
 
-	te->set_engine(val);
-	next.teng = val;
-	for (uint32_t i = 0 ; i < ncols ; i++) {
-		SQLColumn col;
-		const uint32_t cname = next.col_counter++;
-		sql_query_grammar::ColumnDef *cd = i == 0 ? ctdef->mutable_col_def() : ctdef->add_other_col_defs();
-		sql_query_grammar::TypeName *tn = cd->mutable_type();
-
-		col.cname = cname;
-		cd->mutable_col()->set_column("c" + std::to_string(cname));
-		this->max_depth = 4;
-		col.tp = RandomNextType(rg, true, true, next.col_counter, tn->mutable_type());
-		this->max_depth = 10;
-
-		next.cols[cname] = std::move(col);
-	}
-	if ((val >= sql_query_grammar::TableEngine_TableEngineValues::TableEngine_TableEngineValues_CollapsingMergeTree &&
-		 val <= sql_query_grammar::TableEngine_TableEngineValues::TableEngine_TableEngineValues_VersionedCollapsingMergeTree)) {
-		//params for engine
-		const uint32_t limit = val == sql_query_grammar::TableEngine_TableEngineValues::TableEngine_TableEngineValues_VersionedCollapsingMergeTree ? 2 : 1;
-
-		for (uint32_t i = 0 ; i < limit; i++) {
+		te->set_engine(val);
+		next.teng = val;
+		for (uint32_t i = 0 ; i < ncols ; i++) {
 			SQLColumn col;
 			const uint32_t cname = next.col_counter++;
-			sql_query_grammar::ColumnDef *cd = ctdef->add_other_col_defs();
+			sql_query_grammar::ColumnDef *cd = i == 0 ? colsdef->mutable_col_def() : colsdef->add_other_col_defs();
 			sql_query_grammar::TypeName *tn = cd->mutable_type();
 
 			col.cname = cname;
 			cd->mutable_col()->set_column("c" + std::to_string(cname));
-			col.tp = new IntType(8, i == 1);
-			tn->mutable_type()->mutable_non_nullable()->set_integers(i == 1 ? sql_query_grammar::Integers::UInt8 : sql_query_grammar::Integers::Int8);
+			this->max_depth = 4;
+			col.tp = RandomNextType(rg, true, true, next.col_counter, tn->mutable_type());
+			this->max_depth = 10;
 
-			te->add_cols()->set_column("c" + std::to_string(cname));
+			next.cols[cname] = std::move(col);
+		}
+		if ((val >= sql_query_grammar::TableEngineValues::CollapsingMergeTree &&
+			val <= sql_query_grammar::TableEngineValues::VersionedCollapsingMergeTree)) {
+			//params for engine
+			const uint32_t limit = val == sql_query_grammar::TableEngineValues::VersionedCollapsingMergeTree ? 2 : 1;
+
+			for (uint32_t i = 0 ; i < limit; i++) {
+				SQLColumn col;
+				const uint32_t cname = next.col_counter++;
+				sql_query_grammar::ColumnDef *cd = colsdef->add_other_col_defs();
+				sql_query_grammar::TypeName *tn = cd->mutable_type();
+
+				col.cname = cname;
+				cd->mutable_col()->set_column("c" + std::to_string(cname));
+				col.tp = new IntType(8, i == 1);
+				tn->mutable_type()->mutable_non_nullable()->set_integers(i == 1 ? sql_query_grammar::Integers::UInt8 : sql_query_grammar::Integers::Int8);
+
+				te->add_cols()->set_column("c" + std::to_string(cname));
+			}
+		}
+
+		if ((val >= sql_query_grammar::TableEngineValues::MergeTree &&
+			val <= sql_query_grammar::TableEngineValues::VersionedCollapsingMergeTree)) {
+			GenerateTableOrderBy(cc, rg, next, ctdef->mutable_order());
+		}
+
+		if (rg.NextSmallNumber() < 5) {
+			GenerateSelect(cc, rg, true, next.cols.size(), ctdef->mutable_as_select_stmt());
+		}
+	} else {
+		sql_query_grammar::TableLike *tl = ct->mutable_table_like();
+		const SQLTable &t = rg.PickValueRandomlyFromMap(this->tables);
+
+		tl->mutable_est()->mutable_table_name()->set_table("t" + std::to_string(t.tname));
+		for (const auto &col : t.cols) {
+			next.cols[col.first] = col.second;
+		}
+		next.col_counter = t.col_counter;
+		if (rg.NextSmallNumber() < 6) {
+			sql_query_grammar::TableEngine *te = tl->mutable_engine();
+
+			te->set_engine(val);
+			next.teng = val;
+		} else {
+			next.teng = t.teng;
 		}
 	}
 
-	if ((val >= sql_query_grammar::TableEngine_TableEngineValues::TableEngine_TableEngineValues_MergeTree &&
-		 val <= sql_query_grammar::TableEngine_TableEngineValues::TableEngine_TableEngineValues_VersionedCollapsingMergeTree)) {
-		GenerateTableOrderBy(cc, rg, next, ct->mutable_order());
-	}
-
-	if (rg.NextSmallNumber() < 5) {
-		GenerateSelect(cc, rg, true, next.cols.size(), ct->mutable_as_select_stmt());
-	}
 	this->staged_tables[tname] = std::move(next);
 	return 0;
 }
@@ -117,8 +137,8 @@ int StatementGenerator::GenerateNextOptimizeTable(ClientContext &cc, RandomGener
 			ids.clear();
 		}
 	}
-	ot->set_final(t.teng != sql_query_grammar::TableEngine_TableEngineValues::TableEngine_TableEngineValues_Memory &&
-				  t.teng != sql_query_grammar::TableEngine_TableEngineValues::TableEngine_TableEngineValues_MergeTree &&
+	ot->set_final(t.teng != sql_query_grammar::TableEngineValues::Memory &&
+				  t.teng != sql_query_grammar::TableEngineValues::MergeTree &&
 				  rg.NextSmallNumber() < 4);
 	ot->mutable_est()->mutable_table_name()->set_table("t" + std::to_string(t.tname));
 	return 0;
@@ -142,45 +162,51 @@ int StatementGenerator::GenerateNextDescTable(ClientContext &cc, RandomGenerator
 
 int StatementGenerator::GenerateNextInsert(ClientContext &cc, RandomGenerator &rg, sql_query_grammar::Insert *ins) {
 	const SQLTable &t = rg.PickValueRandomlyFromMap(this->tables);
-	const uint32_t nrows = rg.NextMediumNumber(), ncols = t.cols.size();
-	std::string ret;
-	uint32_t sign_col = 10000;
-
-	switch (t.teng) {
-		case sql_query_grammar::TableEngine_TableEngineValues::TableEngine_TableEngineValues_CollapsingMergeTree:
-			sign_col = t.cols.size() - 1;
-			break;
-		default:
-			break;
-	}
 
 	ins->mutable_est()->mutable_table_name()->set_table("t" + std::to_string(t.tname));
 	for (const auto &entry : t.cols) {
 		ins->add_cols()->set_column("c" + std::to_string(entry.second.cname));
 	}
-	this->max_depth = 4;
-	for (uint32_t i = 0 ; i < nrows; i++) {
-		uint32_t j = 0;
 
-		if (i != 0) {
-			ret += ", ";
+	if (rg.NextSmallNumber() < 10) {
+		const uint32_t nrows = rg.NextMediumNumber();
+		std::string ret;
+		uint32_t sign_col = 10000;
+
+		switch (t.teng) {
+			case sql_query_grammar::TableEngineValues::CollapsingMergeTree:
+				sign_col = t.cols.size() - 1;
+				break;
+			default:
+				break;
 		}
-		ret += "(";
-		for (const auto &entry : t.cols) {
-			if (j != 0) {
+
+		this->max_depth = 4;
+		for (uint32_t i = 0 ; i < nrows; i++) {
+			uint32_t j = 0;
+
+			if (i != 0) {
 				ret += ", ";
 			}
-			if (j == sign_col) {
-				ret += rg.NextBool() ? "1" : "-1";
-			} else {
-				StrAppendAnyValue(rg, ret, entry.second.tp);
+			ret += "(";
+			for (const auto &entry : t.cols) {
+				if (j != 0) {
+					ret += ", ";
+				}
+				if (j == sign_col) {
+					ret += rg.NextBool() ? "1" : "-1";
+				} else {
+					StrAppendAnyValue(rg, ret, entry.second.tp);
+				}
+				j++;
 			}
-			j++;
+			ret += ")";
 		}
-		ret += ")";
+		this->max_depth = 10;
+		ins->set_query(ret);
+	} else {
+		GenerateSelect(cc, rg, true, t.cols.size(), ins->mutable_select());
 	}
-	this->max_depth = 10;
-	ins->set_query(ret);
 	return 0;
 }
 
@@ -230,8 +256,8 @@ int StatementGenerator::GenerateNextExchangeTables(ClientContext &cc, RandomGene
 int StatementGenerator::GenerateAlterTable(ClientContext &cc, RandomGenerator &rg, sql_query_grammar::AlterTable *at) {
 	SQLTable &t = const_cast<SQLTable &>(rg.PickValueRandomlyFromMap(this->tables));
 	const std::string tname = "t" + std::to_string(t.tname);
-	const uint32_t alter_order_by = 3 * (t.teng >= sql_query_grammar::TableEngine_TableEngineValues::TableEngine_TableEngineValues_MergeTree &&
-		 								 t.teng <= sql_query_grammar::TableEngine_TableEngineValues::TableEngine_TableEngineValues_VersionedCollapsingMergeTree),
+	const uint32_t alter_order_by = 3 * (t.teng >= sql_query_grammar::TableEngineValues::MergeTree &&
+		 								 t.teng <= sql_query_grammar::TableEngineValues::VersionedCollapsingMergeTree),
 				   heavy_delete = 20,
 				   heavy_update = 20,
 				   add_column = 2 * (t.cols.size() < 10),

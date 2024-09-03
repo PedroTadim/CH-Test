@@ -1300,7 +1300,7 @@ CONV_FN(ColumnDef, cdf) {
   }
 }
 
-CONV_FN(CreateTableDef, ct) {
+CONV_FN(ColumnsDef, ct) {
   ColumnDefToString(ret, ct.col_def());
   for (int i = 0 ; i < ct.other_col_defs_size(); i++) {
     ret += ", ";
@@ -1326,7 +1326,7 @@ CONV_FN(TableOrderBy, to) {
 
 CONV_FN(TableEngine, te) {
   ret += " ENGINE = ";
-  ret += TableEngine_TableEngineValues_Name(te.engine());
+  ret += TableEngineValues_Name(te.engine());
   ret += "(";
   for (int i = 0 ; i < te.cols_size(); i++) {
     if (i != 0) {
@@ -1337,13 +1337,9 @@ CONV_FN(TableEngine, te) {
   ret += ")";
 }
 
-CONV_FN(CreateTable, create_table) {
-  ret += "CREATE TABLE ";
-  if (create_table.if_not_exists())
-    ret += "IF NOT EXISTS ";
-  ExprSchemaTableToString(ret, create_table.est());
-  ret += " (";
-  CreateTableDefToString(ret, create_table.def());
+CONV_FN(CreateTableDef, create_table) {
+  ret += "(";
+  ColumnsDefToString(ret, create_table.def());
   ret += ")";
   TableEngineToString(ret, create_table.engine());
   if (create_table.has_order()) {
@@ -1353,6 +1349,27 @@ CONV_FN(CreateTable, create_table) {
     ret += " AS (";
     SelectToString(ret, create_table.as_select_stmt());
     ret += ")";
+  }
+}
+
+CONV_FN(TableLike, table_like) {
+  ret += " AS ";
+  ExprSchemaTableToString(ret, table_like.est());
+  if (table_like.has_engine()) {
+    TableEngineToString(ret, table_like.engine());
+  }
+}
+
+CONV_FN(CreateTable, create_table) {
+  ret += "CREATE TABLE ";
+  if (create_table.if_not_exists())
+    ret += "IF NOT EXISTS ";
+  ExprSchemaTableToString(ret, create_table.est());
+  ret += " ";
+  if (create_table.has_table_def()) {
+    CreateTableDefToString(ret, create_table.table_def());
+  } else if (create_table.has_table_like()) {
+    TableLikeToString(ret, create_table.table_like());
   }
 }
 
