@@ -797,12 +797,30 @@ message Update {
   required WhereStatement where = 3;
 }
 
+message AddColumn {
+  required ColumnDef new_col = 1;
+  oneof add_colum_oneof {
+    Column after = 2;
+    bool first = 3;
+  }
+}
+
+message RenameCol {
+  required Column old_name = 1;
+  required Column new_name = 2;
+}
+
 message AlterTable {
   required ExprSchemaTable est = 1;
   oneof alter_oneof {
     WhereStatement del = 2;
     Update update = 3;
     TableOrderBy order = 4;
+    Column materialize_column = 5;
+    AddColumn add_column = 6;
+    Column drop_column = 7;
+    RenameCol rename_column = 8;
+    AddColumn modify_column = 9;
   }
 }
 

@@ -228,13 +228,18 @@ int StatementGenerator::GenerateNextExchangeTables(ClientContext &cc, RandomGene
 }
 
 int StatementGenerator::GenerateAlterTable(ClientContext &cc, RandomGenerator &rg, sql_query_grammar::AlterTable *at) {
-	const SQLTable &t = rg.PickValueRandomlyFromMap(this->tables);
+	SQLTable &t = const_cast<SQLTable &>(rg.PickValueRandomlyFromMap(this->tables));
 	const std::string tname = "t" + std::to_string(t.tname);
 	const uint32_t alter_order_by = 3 * (t.teng >= sql_query_grammar::TableEngine_TableEngineValues::TableEngine_TableEngineValues_MergeTree &&
 		 								 t.teng <= sql_query_grammar::TableEngine_TableEngineValues::TableEngine_TableEngineValues_VersionedCollapsingMergeTree),
-				   heavy_delete = 5,
-				   heavy_update = 5,
-				   prob_space = alter_order_by + heavy_delete + heavy_update;
+				   heavy_delete = 20,
+				   heavy_update = 20,
+				   add_column = 2 * (t.cols.size() < 10),
+				   materialize_column = 2,
+				   drop_column = 2 * (!t.cols.empty()),
+				   rename_column = 2,
+				   modify_column = 2,
+				   prob_space = alter_order_by + heavy_delete + heavy_update + add_column + materialize_column + drop_column + rename_column + modify_column;
 	std::uniform_int_distribution<uint32_t> next_dist(1, prob_space);
 	const uint32_t nopt = next_dist(rg.gen);
 
@@ -242,6 +247,62 @@ int StatementGenerator::GenerateAlterTable(ClientContext &cc, RandomGenerator &r
 		GenerateTableOrderBy(cc, rg, t, at->mutable_order());
 	} else if (heavy_delete && nopt < (heavy_delete + alter_order_by + 1)) {
 		GenerateUptDelWhere(cc, rg, t, at->mutable_del()->mutable_expr()->mutable_expr());
+	} else if (add_column && nopt < (heavy_delete + alter_order_by + add_column + 1)) {
+		SQLColumn col;
+		const uint32_t cname = t.col_counter++, next_option = rg.NextSmallNumber();
+		sql_query_grammar::AddColumn *add_col = at->mutable_add_column();
+		sql_query_grammar::ColumnDef *cd = add_col->mutable_new_col();
+		sql_query_grammar::TypeName *tn = cd->mutable_type();
+
+		col.cname = cname;
+		cd->mutable_col()->set_column("c" + std::to_string(cname));
+		this->max_depth = 4;
+		col.tp = RandomNextType(rg, true, true, t.col_counter, tn->mutable_type());
+		this->max_depth = 10;
+
+		if (next_option < 4) {
+			const SQLColumn &col = rg.PickValueRandomlyFromMap(t.cols);
+			add_col->mutable_after()->set_column("c" + std::to_string(col.cname));
+		} else if (next_option < 8) {
+			add_col->set_first(true);
+		}
+		t.staged_cols[cname] = std::move(col);
+	} else if (materialize_column && nopt < (heavy_delete + alter_order_by + add_column + materialize_column + 1)) {
+		const SQLColumn &col = rg.PickValueRandomlyFromMap(t.cols);
+
+		at->mutable_materialize_column()->set_column("c" + std::to_string(col.cname));
+	} else if (drop_column && nopt < (heavy_delete + alter_order_by + add_column + materialize_column + drop_column + 1)) {
+		const SQLColumn &col = rg.PickValueRandomlyFromMap(t.cols);
+
+		at->mutable_drop_column()->set_column("c" + std::to_string(col.cname));
+	} else if (rename_column && nopt < (heavy_delete + alter_order_by + add_column + materialize_column + drop_column + rename_column + 1)) {
+		const uint32_t cname = t.col_counter++;
+		const SQLColumn &col = rg.PickValueRandomlyFromMap(t.cols);
+		sql_query_grammar::RenameCol *rcol = at->mutable_rename_column();
+
+		rcol->mutable_old_name()->set_column("c" + std::to_string(col.cname));
+		rcol->mutable_new_name()->set_column("c" + std::to_string(col.cname));
+	} else if (modify_column && nopt < (heavy_delete + alter_order_by + add_column + materialize_column + drop_column + rename_column + modify_column + 1)) {
+		SQLColumn ncol;
+		const SQLColumn &ocol = rg.PickValueRandomlyFromMap(t.cols);
+		const uint32_t next_option = rg.NextSmallNumber();
+		sql_query_grammar::AddColumn *add_col = at->mutable_modify_column();
+		sql_query_grammar::ColumnDef *cd = add_col->mutable_new_col();
+		sql_query_grammar::TypeName *tn = cd->mutable_type();
+
+		ncol.cname = ocol.cname;
+		cd->mutable_col()->set_column("c" + std::to_string(ocol.cname));
+		this->max_depth = 4;
+		ncol.tp = RandomNextType(rg, true, true, t.col_counter, tn->mutable_type());
+		this->max_depth = 10;
+
+		if (next_option < 4) {
+			const SQLColumn &col = rg.PickValueRandomlyFromMap(t.cols);
+			add_col->mutable_after()->set_column("c" + std::to_string(col.cname));
+		} else if (next_option < 8) {
+			add_col->set_first(true);
+		}
+		t.staged_cols[ncol.cname] = std::move(ncol);
 	} else {
 		SQLRelation rel("");
 		sql_query_grammar::Update *upt = at->mutable_update();
@@ -378,6 +439,40 @@ void StatementGenerator::UpdateGenerator(const sql_query_grammar::SQLQuery &sq, 
 		ty.tname = tname1;
 		this->tables[tname2] = std::move(tx);
 		this->tables[tname1] = std::move(ty);
+	} else if (sq.has_inner_query() && query.has_alter_table()) {
+		const sql_query_grammar::AlterTable &at = sq.inner_query().alter_table();
+		const uint32_t tname = static_cast<uint32_t>(std::stoul(at.est().table_name().table().substr(1)));
+		SQLTable &t = this->tables[tname];
+
+		if (at.has_add_column()) {
+			const uint32_t cname = static_cast<uint32_t>(std::stoul(at.add_column().new_col().col().column().substr(1)));
+
+			if (success) {
+				t.cols[cname] = std::move(t.staged_cols[cname]);
+			}
+			t.staged_cols.erase(cname);
+		} else if (at.has_drop_column()) {
+			const uint32_t cname = static_cast<uint32_t>(std::stoul(at.drop_column().column().substr(1)));
+
+			if (success) {
+				t.cols.erase(cname);
+			}
+		} else if (at.has_rename_column()) {
+			const uint32_t old_cname = static_cast<uint32_t>(std::stoul(at.rename_column().old_name().column().substr(1))),
+						   new_cname = static_cast<uint32_t>(std::stoul(at.rename_column().old_name().column().substr(1)));
+
+			if (success) {
+				t.cols[new_cname] = std::move(t.cols[old_cname]);
+			}
+		} else if (at.has_modify_column()) {
+			const uint32_t cname = static_cast<uint32_t>(std::stoul(at.modify_column().new_col().col().column().substr(1)));
+
+			if (success) {
+				t.cols.erase(cname);
+				t.cols[cname] = std::move(t.staged_cols[cname]);
+			}
+			t.staged_cols.erase(cname);
+		}
 	}
 }
 

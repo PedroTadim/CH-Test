@@ -1484,6 +1484,16 @@ CONV_FN(Update, upt) {
   WhereStatementToString(ret, upt.where());
 }
 
+CONV_FN(AddColumn, add) {
+  ColumnDefToString(ret, add.new_col());
+  if (add.has_after()) {
+    ret += " AFTER";
+    ColumnToString(ret, add.after());
+  } else if (add.has_first()) {
+    ret += " FIRST";
+  }
+}
+
 CONV_FN(AlterTable, alter) {
   ret += "ALTER TABLE ";
   ExprSchemaTableToString(ret, alter.est());
@@ -1501,6 +1511,28 @@ CONV_FN(AlterTable, alter) {
     case AlterType::kOrder:
       ret += "MODIFY";
       TableOrderByToString(ret, alter.order());
+      break;
+    case AlterType::kMaterializeColumn:
+      ret += "MATERIALIZE COLUMN ";
+      ColumnToString(ret, alter.materialize_column());
+      break;
+    case AlterType::kAddColumn:
+      ret += "ADD COLUMN ";
+      AddColumnToString(ret, alter.add_column());
+      break;
+    case AlterType::kDropColumn:
+      ret += "DROP COLUMN ";
+      ColumnToString(ret, alter.drop_column());
+      break;
+    case AlterType::kRenameColumn:
+      ret += "RENAME COLUMN ";
+      ColumnToString(ret, alter.rename_column().old_name());
+      ret += " TO ";
+      ColumnToString(ret, alter.rename_column().new_name());
+      break;
+    case AlterType::kModifyColumn:
+      ret += "MODIFY COLUMN ";
+      AddColumnToString(ret, alter.modify_column());
       break;
     default:
       ret += " DELETE WHERE TRUE";
