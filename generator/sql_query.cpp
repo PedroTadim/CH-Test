@@ -475,7 +475,7 @@ int StatementGenerator::GenerateSelect(ClientContext &cc, RandomGenerator &rg, c
 
 	this->levels[this->current_level] = QueryLevel(this->current_level);
 
-	if (this->depth < this->max_depth && rg.NextSmallNumber() < 3) {
+	if (this->depth < this->max_depth && this->max_width > this->width && rg.NextSmallNumber() < 3) {
 		const uint32_t nclauses = std::min<uint32_t>(this->max_width - this->width, ((uint32_t)rg.NextRandomUInt32() % 3) + 1);
 
 		this->depth++;
