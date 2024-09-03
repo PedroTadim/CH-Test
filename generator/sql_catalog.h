@@ -12,6 +12,7 @@ public:
 
 class SQLTable {
 public:
+	bool is_temp;
 	uint32_t tname, col_counter = 0;
 	sql_query_grammar::TableEngineValues teng;
 	std::map<uint32_t, SQLColumn> cols, staged_cols;

@@ -65,7 +65,7 @@ private:
 	void StrBuildJSONElement(RandomGenerator &rg, std::string &ret);
 	void StrBuildJSON(RandomGenerator &rg, const int depth, const int width, std::string &ret);
 
-	int GenerateTableOrderBy(ClientContext &cc, RandomGenerator &rg, const SQLTable &t, sql_query_grammar::TableOrderBy *tob);
+	int GenerateTableKey(ClientContext &cc, RandomGenerator &rg, const SQLTable &t, sql_query_grammar::TableKey *tob);
 	int GenerateNextDropTable(ClientContext &cc, RandomGenerator &rg, sql_query_grammar::DropTable *sq);
 	int GenerateNextInsert(ClientContext &cc, RandomGenerator &rg, sql_query_grammar::Insert *sq);
 	int GenerateNextDelete(ClientContext &cc, RandomGenerator &rg, sql_query_grammar::Delete *sq);

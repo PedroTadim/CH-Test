@@ -1308,8 +1308,7 @@ CONV_FN(ColumnsDef, ct) {
   }
 }
 
-CONV_FN(TableOrderBy, to) {
-  ret += " ORDER BY ";
+CONV_FN(TableKey, to) {
   if (to.exprs_size() == 0) {
     ret += "tuple()";
   } else {
@@ -1353,9 +1352,14 @@ CONV_FN(TableLike, table_like) {
 }
 
 CONV_FN(CreateTable, create_table) {
-  ret += "CREATE TABLE ";
-  if (create_table.if_not_exists())
+  ret += "CREATE ";
+  if (create_table.is_temp()) {
+    ret += "TEMPORARY ";
+  }
+  ret += "TABLE ";
+  if (create_table.if_not_exists()) {
     ret += "IF NOT EXISTS ";
+  }
   ExprSchemaTableToString(ret, create_table.est());
   ret += " ";
   if (create_table.has_table_def()) {
@@ -1364,7 +1368,16 @@ CONV_FN(CreateTable, create_table) {
     TableLikeToString(ret, create_table.table_like());
   }
   if (create_table.has_order()) {
-    TableOrderByToString(ret, create_table.order());
+    ret += " ORDER BY ";
+    TableKeyToString(ret, create_table.order());
+  }
+  if (create_table.has_partition_by()) {
+    ret += " PARTITION BY ";
+    TableKeyToString(ret, create_table.partition_by());
+  }
+  if (create_table.has_primary_key()) {
+    ret += " PRIMARY KEY ";
+    TableKeyToString(ret, create_table.primary_key());
   }
   if (create_table.allow_nullable()) {
     ret += " SETTINGS allow_nullable_key = 1";
@@ -1529,8 +1542,8 @@ CONV_FN(AlterTable, alter) {
       UpdateToString(ret, alter.update());
       break;
     case AlterType::kOrder:
-      ret += "MODIFY";
-      TableOrderByToString(ret, alter.order());
+      ret += "MODIFY ORDER BY ";
+      TableKeyToString(ret, alter.order());
       break;
     case AlterType::kMaterializeColumn:
       ret += "MATERIALIZE COLUMN ";
@@ -1553,6 +1566,9 @@ CONV_FN(AlterTable, alter) {
     case AlterType::kModifyColumn:
       ret += "MODIFY COLUMN ";
       AddColumnToString(ret, alter.modify_column());
+      break;
+    case AlterType::kDeleteMask:
+      ret += " APPLY DELETED MASK";
       break;
     default:
       ret += " DELETE WHERE TRUE";

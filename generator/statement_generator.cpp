@@ -8,7 +8,7 @@
 
 namespace chfuzz {
 
-int StatementGenerator::GenerateTableOrderBy(ClientContext &cc, RandomGenerator &rg, const SQLTable &t, sql_query_grammar::TableOrderBy *tob) {
+int StatementGenerator::GenerateTableKey(ClientContext &cc, RandomGenerator &rg, const SQLTable &t, sql_query_grammar::TableKey *tkey) {
 	if (rg.NextSmallNumber() < 7) {
 		for (const auto &col : t.cols) {
 			ids.push_back(col.first);
@@ -18,7 +18,7 @@ int StatementGenerator::GenerateTableOrderBy(ClientContext &cc, RandomGenerator 
 
 		std::shuffle(ids.begin(), ids.end(), rg.gen);
 		for (uint32_t i = 0; i < ocols ; i++) {
-			tob->add_exprs()->mutable_comp_expr()->mutable_expr_stc()->mutable_col()->mutable_col()->set_column("c" + std::to_string(ids[i]));
+			tkey->add_exprs()->mutable_comp_expr()->mutable_expr_stc()->mutable_col()->mutable_col()->set_column("c" + std::to_string(ids[i]));
 		}
 		ids.clear();
 	}
@@ -41,6 +41,8 @@ int StatementGenerator::GenerateNextCreateTable(ClientContext &cc, RandomGenerat
 
 	next.tname = tname;
 	ct->mutable_est()->mutable_table_name()->set_table("t" + std::to_string(next.tname));
+	next.is_temp = rg.NextMediumNumber() < 22;
+	ct->set_is_temp(next.is_temp);
 
 	if (tables.empty() || rg.NextSmallNumber() < 9) {
 		sql_query_grammar::CreateTableDef *ctdef = ct->mutable_table_def();
@@ -110,7 +112,13 @@ int StatementGenerator::GenerateNextCreateTable(ClientContext &cc, RandomGenerat
 	}
 	if ((next.teng >= sql_query_grammar::TableEngineValues::MergeTree &&
 		 next.teng <= sql_query_grammar::TableEngineValues::VersionedCollapsingMergeTree)) {
-		GenerateTableOrderBy(cc, rg, next, ct->mutable_order());
+		GenerateTableKey(cc, rg, next, ct->mutable_order());
+		if (rg.NextSmallNumber() < 5) {
+			GenerateTableKey(cc, rg, next, ct->mutable_partition_by());
+		}
+		if (rg.NextSmallNumber() < 5) {
+			GenerateTableKey(cc, rg, next, ct->mutable_primary_key());
+		}
 	}
 	ct->set_allow_nullable(next.teng >= sql_query_grammar::TableEngineValues::MergeTree && next.teng <= sql_query_grammar::TableEngineValues::VersionedCollapsingMergeTree);
 
@@ -276,12 +284,14 @@ int StatementGenerator::GenerateAlterTable(ClientContext &cc, RandomGenerator &r
 				   drop_column = 2 * (t.cols.size() > 1),
 				   rename_column = 2,
 				   modify_column = 2,
-				   prob_space = alter_order_by + heavy_delete + heavy_update + add_column + materialize_column + drop_column + rename_column + modify_column;
+				   delete_mask = 8,
+				   prob_space = alter_order_by + heavy_delete + heavy_update + add_column + materialize_column + drop_column +
+								rename_column + modify_column + delete_mask;
 	std::uniform_int_distribution<uint32_t> next_dist(1, prob_space);
 	const uint32_t nopt = next_dist(rg.gen);
 
 	if (alter_order_by && nopt < (alter_order_by + 1)) {
-		GenerateTableOrderBy(cc, rg, t, at->mutable_order());
+		GenerateTableKey(cc, rg, t, at->mutable_order());
 	} else if (heavy_delete && nopt < (heavy_delete + alter_order_by + 1)) {
 		GenerateUptDelWhere(cc, rg, t, at->mutable_del()->mutable_expr()->mutable_expr());
 	} else if (add_column && nopt < (heavy_delete + alter_order_by + add_column + 1)) {
@@ -312,14 +322,16 @@ int StatementGenerator::GenerateAlterTable(ClientContext &cc, RandomGenerator &r
 		const SQLColumn &col = rg.PickValueRandomlyFromMap(t.cols);
 
 		at->mutable_drop_column()->set_column("c" + std::to_string(col.cname));
-	} else if (rename_column && nopt < (heavy_delete + alter_order_by + add_column + materialize_column + drop_column + rename_column + 1)) {
+	} else if (rename_column && nopt < (heavy_delete + alter_order_by + add_column + materialize_column + drop_column +
+										rename_column + 1)) {
 		const uint32_t ncname = t.col_counter++;
 		const SQLColumn &col = rg.PickValueRandomlyFromMap(t.cols);
 		sql_query_grammar::RenameCol *rcol = at->mutable_rename_column();
 
 		rcol->mutable_old_name()->set_column("c" + std::to_string(col.cname));
 		rcol->mutable_new_name()->set_column("c" + std::to_string(ncname));
-	} else if (modify_column && nopt < (heavy_delete + alter_order_by + add_column + materialize_column + drop_column + rename_column + modify_column + 1)) {
+	} else if (modify_column && nopt < (heavy_delete + alter_order_by + add_column + materialize_column + drop_column +
+										rename_column + modify_column + 1)) {
 		SQLColumn ncol;
 		const SQLColumn &ocol = rg.PickValueRandomlyFromMap(t.cols);
 		const uint32_t next_option = rg.NextSmallNumber();
@@ -340,6 +352,9 @@ int StatementGenerator::GenerateAlterTable(ClientContext &cc, RandomGenerator &r
 			add_col->set_first(true);
 		}
 		t.staged_cols[ncol.cname] = std::move(ncol);
+	} else if (delete_mask && nopt < (heavy_delete + alter_order_by + add_column + materialize_column + drop_column +
+									  rename_column + modify_column + + delete_mask + 1)) {
+		at->set_delete_mask(true);
 	} else {
 		SQLRelation rel("");
 		sql_query_grammar::Update *upt = at->mutable_update();
