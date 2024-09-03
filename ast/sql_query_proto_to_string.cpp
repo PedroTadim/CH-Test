@@ -310,7 +310,7 @@ AddJsonElement(std::string &ret, std::mt19937 &gen) {
       case 9:
       case 10: { //string
         std::uniform_int_distribution<int> slen(0, 200);
-        std::uniform_int_distribution<uint8_t> chars(32, 128);
+        std::uniform_int_distribution<uint8_t> chars(32, 127);
         const int nlen = slen(gen);
 
         ret += '"';
@@ -318,7 +318,7 @@ AddJsonElement(std::string &ret, std::mt19937 &gen) {
           const uint8_t nchar = chars(gen);
 
           switch (nchar) {
-            case 128:
+            case 127:
               ret += "😂";
               break;
             case static_cast<int>('"'):

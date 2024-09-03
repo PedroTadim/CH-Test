@@ -481,7 +481,7 @@ void StatementGenerator::StrBuildJSONElement(RandomGenerator &rg, std::string &r
 		case 9:
 		case 10: { //string
 			std::uniform_int_distribution<int> slen(0, 10);
-			std::uniform_int_distribution<uint8_t> chars(32, 128);
+			std::uniform_int_distribution<uint8_t> chars(32, 127);
 			const int nlen = slen(rg.gen);
 
 			ret += '"';
@@ -489,7 +489,7 @@ void StatementGenerator::StrBuildJSONElement(RandomGenerator &rg, std::string &r
 				const uint8_t nchar = chars(rg.gen);
 
 				switch (nchar) {
-				case 128:
+				case 127:
 					ret += "😂";
 					break;
 				case static_cast<int>('"'):
