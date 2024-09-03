@@ -236,7 +236,7 @@ int StatementGenerator::GenerateAlterTable(ClientContext &cc, RandomGenerator &r
 				   heavy_update = 20,
 				   add_column = 2 * (t.cols.size() < 10),
 				   materialize_column = 2,
-				   drop_column = 2 * (!t.cols.empty()),
+				   drop_column = 2 * (t.cols.size() > 1),
 				   rename_column = 2,
 				   modify_column = 2,
 				   prob_space = alter_order_by + heavy_delete + heavy_update + add_column + materialize_column + drop_column + rename_column + modify_column;
