@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <string>
 
 #include "client_context.h"
 #include "random_generator.h"
@@ -51,6 +52,7 @@ private:
 	std::vector<uint32_t> ids;
 	uint32_t depth = 0, width = 0, max_depth = 4, max_width = 4, max_tables = 10;
 
+	std::map<uint32_t, std::map<std::string, SQLRelation>> ctes;
 	std::map<uint32_t, QueryLevel> levels;
 
 	void AppendDecimal(RandomGenerator &rg, std::string &ret, const uint32_t left, const uint32_t right);
@@ -87,13 +89,14 @@ private:
 
 	int GenerateOrderBy(ClientContext &cc, RandomGenerator &rg, const uint32_t ncols, sql_query_grammar::OrderByStatement *ob);
 	int GenerateLimit(ClientContext &cc, RandomGenerator &rg, const bool has_order_by, const bool has_distinct, const uint32_t ncols, sql_query_grammar::LimitStatement *ls);
-	int GenerateGroupBy(ClientContext &cc, RandomGenerator &rg, sql_query_grammar::GroupByStatement *gb);
+	int GenerateGroupBy(ClientContext &cc, RandomGenerator &rg, const uint32_t ncols, sql_query_grammar::GroupByStatement *gb);
 	int AddWhereFilter(ClientContext &cc, RandomGenerator &rg, sql_query_grammar::BinaryExpr *bexpr);
 	int GenerateWherePredicate(ClientContext &cc, RandomGenerator &rg, sql_query_grammar::Expr *expr);
 	int AddJoinClause(ClientContext &cc, RandomGenerator &rg, sql_query_grammar::BinaryExpr *bexpr);
 	int GenerateArrayJoin(ClientContext &cc, RandomGenerator &rg, sql_query_grammar::ArrayJoin *aj);
 	int GenerateFromElement(ClientContext &cc, RandomGenerator &rg, sql_query_grammar::TableOrSubquery *tos);
 	int GenerateJoinConstraint(ClientContext &cc, RandomGenerator &rg, const bool allow_using, sql_query_grammar::JoinConstraint *jc);
+	int GenerateDerivedTable(ClientContext &cc, RandomGenerator &rg, SQLRelation &rel, sql_query_grammar::Select *sel);
 	int GenerateFromStatement(ClientContext &cc, RandomGenerator &rg, sql_query_grammar::FromStatement *ft);
 	int GenerateSelect(ClientContext &cc, RandomGenerator &rg, const bool top, const uint32_t ncols, sql_query_grammar::Select *sel);
 

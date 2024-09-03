@@ -1203,6 +1203,9 @@ CONV_FN(OrderByStatement, obs) {
     ret += ", ";
     ExprOrderingTermToString(ret, obs.extra_ord_terms(i));
   }
+  if (obs.with_fill()) {
+    ret += " WITH FILL";
+  }
 }
 
 CONV_FN(LimitStatement, ls) {
@@ -1276,11 +1279,24 @@ CONV_FN(SetQuery, setq) {
   ret += ")";
 }
 
+CONV_FN(CTEquery, cteq) {
+  TableToString(ret, cteq.table());
+  ret += " AS (";
+  SelectToString(ret, cteq.query());
+  ret += ")";
+}
+
 CONV_FN(Select, select) {
-  /*if (select.has_with()) {
-    ret += WithStatementToString(select.with());
+  if (select.ctes_size()) {
+    ret += "WITH ";
+    for (int i = 0 ; i < select.ctes_size(); i++) {
+      if (i != 0) {
+        ret += ", ";
+      }
+      CTEqueryToString(ret, select.ctes(i));
+    }
     ret += " ";
-  }*/
+  }
   if (select.has_select_core()) {
     SelectStatementCoreToString(ret, select.select_core());
   } else if (select.has_set_query()) {

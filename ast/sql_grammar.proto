@@ -410,6 +410,7 @@ message ExprOrderingTerm {
 message OrderByStatement {
   required ExprOrderingTerm ord_term = 1;
   repeated ExprOrderingTerm extra_ord_terms = 2;
+  optional bool with_fill = 3;
 }
 
 message LimitStatement {
@@ -448,10 +449,16 @@ message SetQuery {
   required Select sel2 = 4;
 }
 
+message CTEquery {
+  required Table table = 1;
+  required Select query = 2;
+}
+
 message Select {
+  repeated CTEquery ctes = 1;
   oneof select_oneof {
-    SelectStatementCore select_core = 1;
-    SetQuery set_query = 2;
+    SelectStatementCore select_core = 2;
+    SetQuery set_query = 3;
   }
 }
 
