@@ -478,6 +478,7 @@ int StatementGenerator::GenerateSelect(ClientContext &cc, RandomGenerator &rg, c
 	if (this->depth < this->max_depth && rg.NextSmallNumber() < 3) {
 		const uint32_t nclauses = std::min<uint32_t>(this->max_width - this->width, ((uint32_t)rg.NextRandomUInt32() % 3) + 1);
 
+		this->depth++;
 		for (uint32_t i = 0 ; i < nclauses; i++) {
 			sql_query_grammar::CTEquery *cte = sel->add_ctes();
 			std::string name;
@@ -487,10 +488,13 @@ int StatementGenerator::GenerateSelect(ClientContext &cc, RandomGenerator &rg, c
 			name += "d";
 			name += std::to_string(this->current_level);
 			SQLRelation rel(name);
-			GenerateDerivedTable(cc, rg, rel, cte->mutable_query());
 
+			this->width++;
+			GenerateDerivedTable(cc, rg, rel, cte->mutable_query());
 			this->ctes[this->current_level][name] = std::move(rel);
 		}
+		this->width -= nclauses;
+		this->depth--;
 	}
 
 	if (this->depth < this->max_depth && this->max_width > this->width + 1 && rg.NextSmallNumber() < 3) {
@@ -501,13 +505,12 @@ int StatementGenerator::GenerateSelect(ClientContext &cc, RandomGenerator &rg, c
 
 		this->depth++;
 		this->current_level++;
-		this->width++;
 		res = std::max<int>(res, GenerateSelect(cc, rg, false, ncols, setq->mutable_sel1()));
 		this->width++;
 		res = std::max<int>(res, GenerateSelect(cc, rg, false, ncols, setq->mutable_sel2()));
 		this->current_level--;
 		this->depth--;
-		this->width-=2;
+		this->width--;
 	} else {
 		sql_query_grammar::SelectStatementCore *ssc = sel->mutable_select_core();
 
