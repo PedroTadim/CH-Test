@@ -10,14 +10,13 @@ namespace chfuzz {
 
 int StatementGenerator::GenerateTableKey(ClientContext &cc, RandomGenerator &rg, const SQLTable &t, sql_query_grammar::TableKey *tkey) {
 	if (rg.NextSmallNumber() < 7) {
+		const uint32_t ocols = (rg.NextMediumNumber() % std::min<uint32_t>(t.cols.size(), UINT32_C(3))) + 1;
+
 		for (const auto &col : t.cols) {
 			ids.push_back(col.first);
 		}
 		std::shuffle(ids.begin(), ids.end(), rg.gen);
-		const uint32_t ocols = (rg.NextMediumNumber() % std::min<uint32_t>(ids.size(), UINT32_C(3))) + 1;
-
-		std::shuffle(ids.begin(), ids.end(), rg.gen);
-		for (uint32_t i = 0; i < ocols ; i++) {
+		for (uint32_t i = 0; i < ocols; i++) {
 			tkey->add_exprs()->mutable_comp_expr()->mutable_expr_stc()->mutable_col()->mutable_col()->set_column("c" + std::to_string(ids[i]));
 		}
 		ids.clear();
@@ -37,6 +36,7 @@ const std::vector<sql_query_grammar::TableEngineValues> like_engs = {
 
 int StatementGenerator::GenerateNextCreateTable(ClientContext &cc, RandomGenerator &rg, sql_query_grammar::CreateTable *ct) {
 	SQLTable next;
+	bool set_nullable = true;
 	const uint32_t tname = this->table_counter++;
 
 	next.tname = tname;
@@ -108,19 +108,30 @@ int StatementGenerator::GenerateNextCreateTable(ClientContext &cc, RandomGenerat
 			te->set_engine(next.teng);
 		} else {
 			next.teng = t.teng;
+			set_nullable = false;
 		}
 	}
 	if ((next.teng >= sql_query_grammar::TableEngineValues::MergeTree &&
 		 next.teng <= sql_query_grammar::TableEngineValues::VersionedCollapsingMergeTree)) {
 		GenerateTableKey(cc, rg, next, ct->mutable_order());
+		if (ct->order().exprs_size() && rg.NextSmallNumber() < 5) {
+			//pkey is a subset of order by
+			sql_query_grammar::TableKey *tkey = ct->mutable_primary_key();
+			std::uniform_int_distribution<uint32_t> table_order_by(1, ct->order().exprs_size());
+			const uint32_t pkey_size = table_order_by(rg.gen);
+
+			for (uint32_t i = 0 ; i < pkey_size; i++) {
+				const std::string &ncol = ct->order().exprs(i).comp_expr().expr_stc().col().col().column();
+
+				tkey->add_exprs()->mutable_comp_expr()->mutable_expr_stc()->mutable_col()->mutable_col()->set_column(ncol);
+			}
+		}
 		if (rg.NextSmallNumber() < 5) {
 			GenerateTableKey(cc, rg, next, ct->mutable_partition_by());
 		}
-		if (rg.NextSmallNumber() < 5) {
-			GenerateTableKey(cc, rg, next, ct->mutable_primary_key());
-		}
 	}
-	ct->set_allow_nullable(next.teng >= sql_query_grammar::TableEngineValues::MergeTree && next.teng <= sql_query_grammar::TableEngineValues::VersionedCollapsingMergeTree);
+	ct->set_allow_nullable(set_nullable &&
+						   next.teng >= sql_query_grammar::TableEngineValues::MergeTree && next.teng <= sql_query_grammar::TableEngineValues::VersionedCollapsingMergeTree);
 
 	this->staged_tables[tname] = std::move(next);
 	return 0;
