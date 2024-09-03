@@ -335,7 +335,7 @@ int StatementGenerator::GenerateAlterTable(ClientContext &cc, RandomGenerator &r
 }
 
 int StatementGenerator::GenerateNextQuery(ClientContext &cc, RandomGenerator &rg, sql_query_grammar::SQLQueryInner *sq) {
-	const uint32_t create_table = 5 * (tables.size() < this->max_tables),
+	const uint32_t create_table = 4 * (tables.size() < this->max_tables),
 				   drop_table = 2 * (int)!tables.empty(),
 				   insert = 30 * (int)!tables.empty(),
 				   light_delete = 5 * (int)!tables.empty(),
@@ -345,7 +345,7 @@ int StatementGenerator::GenerateNextQuery(ClientContext &cc, RandomGenerator &rg
 				   desc_table = 2 * (int)!tables.empty(),
 				   exchange_tables = 1 * (int)(tables.size() > 1),
 				   alter_table = 5 * (int)!tables.empty(),
-				   select_query = 200,
+				   select_query = 300,
 				   prob_space = create_table + drop_table + insert + light_delete + truncate + optimize_table +
 				   				check_table + desc_table + exchange_tables + alter_table + select_query;
 
@@ -459,10 +459,11 @@ void StatementGenerator::UpdateGenerator(const sql_query_grammar::SQLQuery &sq, 
 			}
 		} else if (at.has_rename_column()) {
 			const uint32_t old_cname = static_cast<uint32_t>(std::stoul(at.rename_column().old_name().column().substr(1))),
-						   new_cname = static_cast<uint32_t>(std::stoul(at.rename_column().old_name().column().substr(1)));
+						   new_cname = static_cast<uint32_t>(std::stoul(at.rename_column().new_name().column().substr(1)));
 
 			if (success) {
 				t.cols[new_cname] = std::move(t.cols[old_cname]);
+				t.cols.erase(old_cname);
 			}
 		} else if (at.has_modify_column()) {
 			const uint32_t cname = static_cast<uint32_t>(std::stoul(at.modify_column().new_col().col().column().substr(1)));

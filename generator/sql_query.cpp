@@ -480,7 +480,7 @@ int StatementGenerator::GenerateSelect(ClientContext &cc, RandomGenerator &rg, c
 			res = std::max<int>(res, GenerateFromStatement(cc, rg, ssc->mutable_from()));
 		}
 
-		if (this->depth < this->max_depth && rg.NextSmallNumber() < 5) {
+		if (this->depth < this->max_depth && ssc->has_from() && rg.NextSmallNumber() < 5) {
 			GenerateWherePredicate(cc, rg, ssc->mutable_pre_where()->mutable_expr()->mutable_expr());
 		}
 		if (this->depth < this->max_depth && rg.NextSmallNumber() < 5) {
