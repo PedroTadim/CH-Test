@@ -33,7 +33,7 @@ public:
 
 class QueryLevel {
 public:
-	bool global_aggregate = false, inside_aggregate = false;
+	bool global_aggregate = false, inside_aggregate = false, allow_aggregates = true;
 	uint32_t level, aliases_counter = 0;
 	std::vector<SQLRelationCol> gcols;
 	std::vector<SQLRelation> rels;

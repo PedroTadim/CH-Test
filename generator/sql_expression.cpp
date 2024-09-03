@@ -407,7 +407,8 @@ int StatementGenerator::GenerateExpression(ClientContext &cc, RandomGenerator &r
 	} else {
 		//func
 		sql_query_grammar::SQLFuncCall *func_call = expr->mutable_comp_expr()->mutable_func_call();
-		const uint32_t nfuncs = CHFuncs.size() + (this->levels[this->current_level].inside_aggregate ? 0 : CHAggrs.size());
+		const bool allow_aggr = !this->levels[this->current_level].inside_aggregate && this->levels[this->current_level].allow_aggregates;
+		const uint32_t nfuncs = CHFuncs.size() + (allow_aggr ? CHAggrs.size() : 0);
 		std::uniform_int_distribution<uint32_t> next_dist(0, nfuncs - 1);
 		const uint32_t nopt = next_dist(rg.gen);
 		uint32_t generated_params = 0;

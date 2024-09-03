@@ -522,6 +522,7 @@ int StatementGenerator::GenerateSelect(ClientContext &cc, RandomGenerator &rg, c
 			res = std::max<int>(res, GenerateFromStatement(cc, rg, ssc->mutable_from()));
 		}
 
+		this->levels[this->current_level].allow_aggregates = false;
 		if (this->depth < this->max_depth && ssc->has_from() && rg.NextSmallNumber() < 5) {
 			GenerateWherePredicate(cc, rg, ssc->mutable_pre_where()->mutable_expr()->mutable_expr());
 		}
@@ -534,6 +535,7 @@ int StatementGenerator::GenerateSelect(ClientContext &cc, RandomGenerator &rg, c
 		} else {
 			this->levels[this->current_level].global_aggregate = rg.NextSmallNumber() < 3;
 		}
+		this->levels[this->current_level].allow_aggregates = true;
 
 		this->depth++;
 		for (uint32_t i = 0 ; i < ncols; i++) {
