@@ -1366,6 +1366,9 @@ CONV_FN(CreateTable, create_table) {
   if (create_table.has_order()) {
     TableOrderByToString(ret, create_table.order());
   }
+  if (create_table.allow_nullable()) {
+    ret += " SETTINGS allow_nullable_key = 1";
+  }
   if (create_table.has_table_def() && create_table.has_as_select_stmt()) {
     ret += " AS (";
     SelectToString(ret, create_table.as_select_stmt());

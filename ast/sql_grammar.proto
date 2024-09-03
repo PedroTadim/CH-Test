@@ -634,7 +634,8 @@ message CreateTable {
     TableLike table_like = 4;
   }
   optional TableOrderBy order = 5;
-  optional Select as_select_stmt = 6; // AS select-stmt
+  optional bool allow_nullable = 6;
+  optional Select as_select_stmt = 7; // AS select-stmt
 }
 
 message DropTable {

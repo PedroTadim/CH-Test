@@ -112,6 +112,7 @@ int StatementGenerator::GenerateNextCreateTable(ClientContext &cc, RandomGenerat
 		 next.teng <= sql_query_grammar::TableEngineValues::VersionedCollapsingMergeTree)) {
 		GenerateTableOrderBy(cc, rg, next, ct->mutable_order());
 	}
+	ct->set_allow_nullable(next.teng >= sql_query_grammar::TableEngineValues::MergeTree && next.teng <= sql_query_grammar::TableEngineValues::VersionedCollapsingMergeTree);
 
 	this->staged_tables[tname] = std::move(next);
 	return 0;
