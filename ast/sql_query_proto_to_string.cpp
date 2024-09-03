@@ -1568,7 +1568,7 @@ CONV_FN(AlterTable, alter) {
       AddColumnToString(ret, alter.modify_column());
       break;
     case AlterType::kDeleteMask:
-      ret += " APPLY DELETED MASK";
+      ret += "APPLY DELETED MASK";
       break;
     default:
       ret += " DELETE WHERE TRUE";
