@@ -25,11 +25,19 @@ int StatementGenerator::GenerateTableOrderBy(ClientContext &cc, RandomGenerator 
 	return 0;
 }
 
+const std::vector<sql_query_grammar::TableEngineValues> like_engs = {
+  sql_query_grammar::TableEngineValues::Memory,
+  sql_query_grammar::TableEngineValues::MergeTree,
+  sql_query_grammar::TableEngineValues::ReplacingMergeTree,
+  sql_query_grammar::TableEngineValues::SummingMergeTree,
+  sql_query_grammar::TableEngineValues::AggregatingMergeTree,
+  sql_query_grammar::TableEngineValues::StripeLog,
+  sql_query_grammar::TableEngineValues::Log,
+  sql_query_grammar::TableEngineValues::TinyLog};
+
 int StatementGenerator::GenerateNextCreateTable(ClientContext &cc, RandomGenerator &rg, sql_query_grammar::CreateTable *ct) {
 	SQLTable next;
-	std::uniform_int_distribution<uint32_t> table_engine(1, sql_query_grammar::TableEngineValues_MAX);
-	const uint32_t tname = this->table_counter++, nopt = table_engine(rg.gen);
-	sql_query_grammar::TableEngineValues val = (sql_query_grammar::TableEngineValues) nopt;
+	const uint32_t tname = this->table_counter++;
 
 	next.tname = tname;
 	ct->mutable_est()->mutable_table_name()->set_table("t" + std::to_string(next.tname));
@@ -38,7 +46,9 @@ int StatementGenerator::GenerateNextCreateTable(ClientContext &cc, RandomGenerat
 		sql_query_grammar::CreateTableDef *ctdef = ct->mutable_table_def();
 		sql_query_grammar::ColumnsDef *colsdef = ctdef->mutable_def();
 		sql_query_grammar::TableEngine *te = ctdef->mutable_engine();
-		const uint32_t ncols = (rg.NextMediumNumber() % 5) + 1;
+		std::uniform_int_distribution<uint32_t> table_engine(1, sql_query_grammar::TableEngineValues_MAX);
+		const uint32_t ncols = (rg.NextMediumNumber() % 5) + 1, nopt = table_engine(rg.gen);
+		sql_query_grammar::TableEngineValues val = (sql_query_grammar::TableEngineValues) nopt;
 
 		te->set_engine(val);
 		next.teng = val;
@@ -56,10 +66,10 @@ int StatementGenerator::GenerateNextCreateTable(ClientContext &cc, RandomGenerat
 
 			next.cols[cname] = std::move(col);
 		}
-		if ((val >= sql_query_grammar::TableEngineValues::CollapsingMergeTree &&
-			val <= sql_query_grammar::TableEngineValues::VersionedCollapsingMergeTree)) {
+		if ((next.teng >= sql_query_grammar::TableEngineValues::CollapsingMergeTree &&
+			 next.teng <= sql_query_grammar::TableEngineValues::VersionedCollapsingMergeTree)) {
 			//params for engine
-			const uint32_t limit = val == sql_query_grammar::TableEngineValues::VersionedCollapsingMergeTree ? 2 : 1;
+			const uint32_t limit = next.teng == sql_query_grammar::TableEngineValues::VersionedCollapsingMergeTree ? 2 : 1;
 
 			for (uint32_t i = 0 ; i < limit; i++) {
 				SQLColumn col;
@@ -73,16 +83,12 @@ int StatementGenerator::GenerateNextCreateTable(ClientContext &cc, RandomGenerat
 				tn->mutable_type()->mutable_non_nullable()->set_integers(i == 1 ? sql_query_grammar::Integers::UInt8 : sql_query_grammar::Integers::Int8);
 
 				te->add_cols()->set_column("c" + std::to_string(cname));
+
+				next.engine_cols.push_back(cname);
 			}
 		}
-
-		if ((val >= sql_query_grammar::TableEngineValues::MergeTree &&
-			val <= sql_query_grammar::TableEngineValues::VersionedCollapsingMergeTree)) {
-			GenerateTableOrderBy(cc, rg, next, ctdef->mutable_order());
-		}
-
 		if (rg.NextSmallNumber() < 5) {
-			GenerateSelect(cc, rg, true, next.cols.size(), ctdef->mutable_as_select_stmt());
+			GenerateSelect(cc, rg, true, next.cols.size(), ct->mutable_as_select_stmt());
 		}
 	} else {
 		sql_query_grammar::TableLike *tl = ct->mutable_table_like();
@@ -96,11 +102,15 @@ int StatementGenerator::GenerateNextCreateTable(ClientContext &cc, RandomGenerat
 		if (rg.NextSmallNumber() < 6) {
 			sql_query_grammar::TableEngine *te = tl->mutable_engine();
 
-			te->set_engine(val);
-			next.teng = val;
+			next.teng = rg.PickRandomlyFromVector(like_engs);
+			te->set_engine(next.teng);
 		} else {
 			next.teng = t.teng;
 		}
+	}
+	if ((next.teng >= sql_query_grammar::TableEngineValues::MergeTree &&
+		 next.teng <= sql_query_grammar::TableEngineValues::VersionedCollapsingMergeTree)) {
+		GenerateTableOrderBy(cc, rg, next, ct->mutable_order());
 	}
 
 	this->staged_tables[tname] = std::move(next);

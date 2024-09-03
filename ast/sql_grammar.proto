@@ -619,8 +619,6 @@ message TableEngine {
 message CreateTableDef {
   required ColumnsDef def = 1;
   required TableEngine engine = 2;
-  optional TableOrderBy order = 3;
-  optional Select as_select_stmt = 4; // AS select-stmt
 }
 
 message TableLike {
@@ -635,6 +633,8 @@ message CreateTable {
     CreateTableDef table_def = 3;
     TableLike table_like = 4;
   }
+  optional TableOrderBy order = 5;
+  optional Select as_select_stmt = 6; // AS select-stmt
 }
 
 message DropTable {

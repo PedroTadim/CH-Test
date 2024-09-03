@@ -1342,18 +1342,10 @@ CONV_FN(CreateTableDef, create_table) {
   ColumnsDefToString(ret, create_table.def());
   ret += ")";
   TableEngineToString(ret, create_table.engine());
-  if (create_table.has_order()) {
-    TableOrderByToString(ret, create_table.order());
-  }
-  if (create_table.has_as_select_stmt()) {
-    ret += " AS (";
-    SelectToString(ret, create_table.as_select_stmt());
-    ret += ")";
-  }
 }
 
 CONV_FN(TableLike, table_like) {
-  ret += " AS ";
+  ret += "AS ";
   ExprSchemaTableToString(ret, table_like.est());
   if (table_like.has_engine()) {
     TableEngineToString(ret, table_like.engine());
@@ -1370,6 +1362,14 @@ CONV_FN(CreateTable, create_table) {
     CreateTableDefToString(ret, create_table.table_def());
   } else if (create_table.has_table_like()) {
     TableLikeToString(ret, create_table.table_like());
+  }
+  if (create_table.has_order()) {
+    TableOrderByToString(ret, create_table.order());
+  }
+  if (create_table.has_table_def() && create_table.has_as_select_stmt()) {
+    ret += " AS (";
+    SelectToString(ret, create_table.as_select_stmt());
+    ret += ")";
   }
 }
 
