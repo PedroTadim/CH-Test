@@ -276,12 +276,12 @@ int StatementGenerator::GenerateAlterTable(ClientContext &cc, RandomGenerator &r
 
 		at->mutable_drop_column()->set_column("c" + std::to_string(col.cname));
 	} else if (rename_column && nopt < (heavy_delete + alter_order_by + add_column + materialize_column + drop_column + rename_column + 1)) {
-		const uint32_t cname = t.col_counter++;
+		const uint32_t ncname = t.col_counter++;
 		const SQLColumn &col = rg.PickValueRandomlyFromMap(t.cols);
 		sql_query_grammar::RenameCol *rcol = at->mutable_rename_column();
 
 		rcol->mutable_old_name()->set_column("c" + std::to_string(col.cname));
-		rcol->mutable_new_name()->set_column("c" + std::to_string(col.cname));
+		rcol->mutable_new_name()->set_column("c" + std::to_string(ncname));
 	} else if (modify_column && nopt < (heavy_delete + alter_order_by + add_column + materialize_column + drop_column + rename_column + modify_column + 1)) {
 		SQLColumn ncol;
 		const SQLColumn &ocol = rg.PickValueRandomlyFromMap(t.cols);
