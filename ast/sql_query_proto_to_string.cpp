@@ -1487,7 +1487,7 @@ CONV_FN(Update, upt) {
 CONV_FN(AddColumn, add) {
   ColumnDefToString(ret, add.new_col());
   if (add.has_after()) {
-    ret += " AFTER";
+    ret += " AFTER ";
     ColumnToString(ret, add.after());
   } else if (add.has_first()) {
     ret += " FIRST";
