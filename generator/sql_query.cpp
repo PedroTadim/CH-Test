@@ -489,6 +489,7 @@ int StatementGenerator::GenerateSelect(ClientContext &cc, RandomGenerator &rg, c
 			name += std::to_string(this->current_level);
 			SQLRelation rel(name);
 
+			cte->mutable_table()->set_table(name);
 			GenerateDerivedTable(cc, rg, rel, cte->mutable_query());
 			this->ctes[this->current_level][name] = std::move(rel);
 			this->width++;
